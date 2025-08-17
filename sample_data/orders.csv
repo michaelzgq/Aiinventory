@@ -1,0 +1,11 @@
+order_id,ship_date,sku,qty,item_ids,status
+SO-1001,2025-08-17,SKU-5566,2,"[""PALT-0001"",""PALT-0002""]",pending
+SO-1002,2025-08-17,SKU-8899,1,"[""PALT-0003""]",pending
+SO-1003,2025-08-18,SKU-7777,3,"[""PALT-0004"",""PALT-0005"",""PALT-0006""]",pending
+SO-1004,2025-08-17,SKU-5566,1,"[""PALT-0007""]",shipped
+SO-1005,2025-08-18,SKU-9999,2,"[""PALT-0008"",""PALT-0009""]",pending
+SO-1006,2025-08-17,SKU-1234,1,"""",pending
+SO-1007,2025-08-19,SKU-5566,1,"[""PALT-0010""]",pending
+SO-1008,2025-08-18,SKU-8899,2,"[""PALT-0011"",""PALT-0012""]",pending
+SO-1009,2025-08-17,SKU-7777,1,"[""PALT-0013""]",shipped
+SO-1010,2025-08-19,SKU-9999,1,"[""PALT-0014""]",pending

@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  inventory-ai:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: inventory-ai
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - API_KEY=your-secret-api-key-here
+      - DB_URL=sqlite:///./inventory.db
+      - TZ=America/Los_Angeles
+      - USE_PADDLE_OCR=true
+      - STAGING_BINS=S-01,S-02,S-03,S-04
+      - STAGING_THRESHOLD_HOURS=12
+      - STORAGE_BACKEND=local
+      - STORAGE_LOCAL_DIR=/app/storage
+    volumes:
+      - inventory_data:/app/storage
+      - inventory_db:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - inventory_network
+
+  # Optional: PostgreSQL database (uncomment to use instead of SQLite)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: inventory-postgres
+  #   environment:
+  #     POSTGRES_DB: inventory
+  #     POSTGRES_USER: inventory_user
+  #     POSTGRES_PASSWORD: inventory_password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - inventory_network
+
+  # Optional: Redis for caching (for future use)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: inventory-redis
+  #   command: redis-server --appendonly yes
+  #   volumes:
+  #     - redis_data:/data
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - inventory_network
+
+volumes:
+  inventory_data:
+    driver: local
+  inventory_db:
+    driver: local
+  # postgres_data:
+  #   driver: local
+  # redis_data:
+  #   driver: local
+
+networks:
+  inventory_network:
+    driver: bridge

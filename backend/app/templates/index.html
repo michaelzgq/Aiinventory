@@ -1,0 +1,339 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - Inventory AI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+        <p class="lead">Today's inventory overview and system status</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Quick Stats Cards -->
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Today's Orders</h5>
+                        <h2 id="today-orders">-</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-shopping-cart fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Snapshots Today</h5>
+                        <h2 id="today-snapshots">-</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-camera fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Anomalies</h5>
+                        <h2 id="today-anomalies">-</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Bins Scanned</h5>
+                        <h2 id="bins-scanned">-</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-cubes fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/scan" class="btn btn-primary">
+                        <i class="fas fa-camera"></i> Start Scanning
+                    </a>
+                    <a href="/upload-orders" class="btn btn-info">
+                        <i class="fas fa-upload"></i> Upload Orders/Allocations
+                    </a>
+                    <button class="btn btn-warning" onclick="runReconciliation()">
+                        <i class="fas fa-sync"></i> Run Daily Reconciliation
+                    </button>
+                    <a href="/reconcile" class="btn btn-success">
+                        <i class="fas fa-download"></i> Download Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Natural Language Query -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-comments"></i> Ask a Question</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="nlq-input" 
+                           placeholder="e.g., 'A54现在有什么？' or 'Where is SKU-5566?'">
+                </div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="processNLQ()">
+                        <i class="fas fa-search"></i> Ask
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="startVoiceInput()">
+                        <i class="fas fa-microphone"></i> Voice Input
+                    </button>
+                </div>
+                <div id="nlq-result" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Recent Snapshots -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Recent Snapshots</h5>
+            </div>
+            <div class="card-body">
+                <div id="recent-snapshots">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Anomalies -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-exclamation-circle"></i> Recent Anomalies</h5>
+            </div>
+            <div class="card-body">
+                <div id="recent-anomalies">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Load dashboard data
+    async function loadDashboardData() {
+        try {
+            // Load reconciliation status
+            const statusResponse = await fetch('/api/reconcile/status', {
+                headers: {'Authorization': `Bearer ${getApiKey()}`}
+            });
+            const statusData = await statusResponse.json();
+            
+            document.getElementById('today-orders').textContent = statusData.today_orders;
+            document.getElementById('today-snapshots').textContent = statusData.today_snapshots;
+            document.getElementById('today-anomalies').textContent = statusData.today_anomalies;
+            document.getElementById('bins-scanned').textContent = statusData.total_bins_scanned;
+
+            // Load recent snapshots
+            const snapshotsResponse = await fetch('/api/snapshots?limit=5', {
+                headers: {'Authorization': `Bearer ${getApiKey()}`}
+            });
+            const snapshotsData = await snapshotsResponse.json();
+            displayRecentSnapshots(snapshotsData);
+
+            // Load recent anomalies
+            const anomaliesResponse = await fetch('/api/reconcile/anomalies?limit=5', {
+                headers: {'Authorization': `Bearer ${getApiKey()}`}
+            });
+            const anomaliesData = await anomaliesResponse.json();
+            displayRecentAnomalies(anomaliesData);
+
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+        }
+    }
+
+    function displayRecentSnapshots(snapshots) {
+        const container = document.getElementById('recent-snapshots');
+        if (snapshots.length === 0) {
+            container.innerHTML = '<p class="text-muted">No recent snapshots</p>';
+            return;
+        }
+
+        const html = snapshots.map(snapshot => `
+            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                <div>
+                    <strong>${snapshot.bin_id || 'Unknown Bin'}</strong><br>
+                    <small class="text-muted">${snapshot.item_ids.length} items</small>
+                </div>
+                <div class="text-end">
+                    <small>${new Date(snapshot.ts).toLocaleTimeString()}</small><br>
+                    <span class="badge bg-${snapshot.conf > 0.8 ? 'success' : snapshot.conf > 0.5 ? 'warning' : 'danger'}">
+                        ${(snapshot.conf * 100).toFixed(0)}%
+                    </span>
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+
+    function displayRecentAnomalies(anomalies) {
+        const container = document.getElementById('recent-anomalies');
+        if (anomalies.length === 0) {
+            container.innerHTML = '<p class="text-muted text-success">No recent anomalies! 🎉</p>';
+            return;
+        }
+
+        const html = anomalies.map(anomaly => `
+            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                <div>
+                    <span class="badge bg-${anomaly.severity === 'high' ? 'danger' : anomaly.severity === 'med' ? 'warning' : 'info'}">
+                        ${anomaly.type}
+                    </span><br>
+                    <small class="text-muted">${anomaly.detail.substring(0, 50)}...</small>
+                </div>
+                <div class="text-end">
+                    <small>${new Date(anomaly.ts).toLocaleTimeString()}</small>
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = html;
+    }
+
+    // Natural Language Query
+    async function processNLQ() {
+        const input = document.getElementById('nlq-input');
+        const result = document.getElementById('nlq-result');
+        const query = input.value.trim();
+        
+        if (!query) return;
+
+        result.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+        
+        try {
+            const response = await fetch('/api/nlq/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getApiKey()}`
+                },
+                body: JSON.stringify({text: query})
+            });
+            
+            const data = await response.json();
+            
+            result.innerHTML = `
+                <div class="alert alert-info">
+                    <strong>Answer:</strong> ${data.answer}
+                </div>
+                ${data.data ? `<pre class="small bg-light p-2 rounded">${JSON.stringify(data.data, null, 2)}</pre>` : ''}
+            `;
+        } catch (error) {
+            result.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+        }
+    }
+
+    // Voice input (if supported)
+    function startVoiceInput() {
+        if ('webkitSpeechRecognition' in window) {
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US,zh-CN';
+            recognition.onresult = function(event) {
+                document.getElementById('nlq-input').value = event.results[0][0].transcript;
+            };
+            recognition.start();
+        } else {
+            alert('Voice input not supported in this browser');
+        }
+    }
+
+    // Run reconciliation
+    async function runReconciliation() {
+        if (!confirm('Run reconciliation for today? This may take a few minutes.')) return;
+        
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Running...';
+        button.disabled = true;
+        
+        try {
+            const response = await fetch('/api/reconcile/run', {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${getApiKey()}`}
+            });
+            
+            const data = await response.json();
+            alert(`Reconciliation completed! Found ${data.reconciliation.total_anomalies} anomalies.`);
+            loadDashboardData(); // Refresh data
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        } finally {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    }
+
+    // Helper function to get API key (in a real app, this would be more secure)
+    function getApiKey() {
+        return 'changeme-supersecret'; // This should be configured properly
+    }
+
+    // Enter key support for NLQ
+    document.getElementById('nlq-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            processNLQ();
+        }
+    });
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', loadDashboardData);
+</script>
+{% endblock %}

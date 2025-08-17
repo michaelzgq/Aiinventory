@@ -1,0 +1,325 @@
+{% extends "layout.html" %}
+
+{% block title %}Upload Data - Inventory AI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-upload"></i> Upload Data</h1>
+        <p class="lead">Upload orders, allocations, and bin data via CSV files</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-shopping-cart"></i> Orders CSV</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">Upload orders with shipping dates and item allocations.</p>
+                <form id="orders-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <input type="file" class="form-control" id="orders-file" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-upload"></i> Upload Orders
+                    </button>
+                </form>
+                <div id="orders-result" class="mt-3"></div>
+                
+                <div class="mt-3">
+                    <h6>CSV Format:</h6>
+                    <pre class="small bg-light p-2 rounded">order_id,ship_date,sku,qty,item_ids
+SO-1001,2025-08-16,SKU-5566,2,"[""PALT-0001"",""PALT-0002""]"
+SO-1002,2025-08-16,SKU-8899,1,</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-map-marker-alt"></i> Allocations CSV</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">Upload item-to-bin allocations and status updates.</p>
+                <form id="allocations-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <input type="file" class="form-control" id="allocations-file" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn btn-info w-100">
+                        <i class="fas fa-upload"></i> Upload Allocations
+                    </button>
+                </form>
+                <div id="allocations-result" class="mt-3"></div>
+                
+                <div class="mt-3">
+                    <h6>CSV Format:</h6>
+                    <pre class="small bg-light p-2 rounded">item_id,bin_id,status
+PALT-0001,A54,allocated
+PALT-0002,A52,allocated</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-cubes"></i> Bins CSV</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">Upload bin definitions with zones and coordinates.</p>
+                <form id="bins-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <input type="file" class="form-control" id="bins-file" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-upload"></i> Upload Bins
+                    </button>
+                </form>
+                <div id="bins-result" class="mt-3"></div>
+                
+                <div class="mt-3">
+                    <h6>CSV Format:</h6>
+                    <pre class="small bg-light p-2 rounded">bin_id,zone,coords
+A54,Zone-A,100,200
+S-01,Staging,50,100</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Upload Summary</h5>
+            </div>
+            <div class="card-body">
+                <div id="upload-summary">
+                    <p class="text-muted">No uploads yet</p>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" onclick="loadSummary()">
+                    <i class="fas fa-refresh"></i> Refresh Summary
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-download"></i> Sample Files</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">Download sample CSV files to see the expected format:</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="downloadSample('orders')">
+                        <i class="fas fa-download"></i> Sample Orders CSV
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="downloadSample('allocations')">
+                        <i class="fas fa-download"></i> Sample Allocations CSV
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="downloadSample('bins')">
+                        <i class="fas fa-download"></i> Sample Bins CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Upload Guidelines</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Orders CSV:</h6>
+                        <ul class="small">
+                            <li><code>order_id</code>: Unique order identifier</li>
+                            <li><code>ship_date</code>: Format YYYY-MM-DD</li>
+                            <li><code>sku</code>: Product SKU</li>
+                            <li><code>qty</code>: Quantity to ship</li>
+                            <li><code>item_ids</code>: JSON array or semicolon-separated (optional)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Allocations CSV:</h6>
+                        <ul class="small">
+                            <li><code>item_id</code>: Unique item identifier</li>
+                            <li><code>bin_id</code>: Target bin location</li>
+                            <li><code>status</code>: allocated/picked/staged/shipped</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Bins CSV:</h6>
+                        <ul class="small">
+                            <li><code>bin_id</code>: Unique bin identifier</li>
+                            <li><code>zone</code>: Zone name (optional)</li>
+                            <li><code>coords</code>: X,Y coordinates (optional)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Upload form handlers
+    document.getElementById('orders-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        uploadFile('orders', '/api/orders/upload', 'orders-file', 'orders-result');
+    });
+
+    document.getElementById('allocations-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        uploadFile('allocations', '/api/allocations/upload', 'allocations-file', 'allocations-result');
+    });
+
+    document.getElementById('bins-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        uploadFile('bins', '/api/orders/upload', 'bins-file', 'bins-result'); // Note: need to create bins endpoint
+    });
+
+    async function uploadFile(type, endpoint, fileInputId, resultContainerId) {
+        const fileInput = document.getElementById(fileInputId);
+        const resultContainer = document.getElementById(resultContainerId);
+        const form = fileInput.closest('form');
+        const submitButton = form.querySelector('button[type="submit"]');
+        
+        if (!fileInput.files[0]) {
+            resultContainer.innerHTML = '<div class="alert alert-warning">Please select a file</div>';
+            return;
+        }
+
+        // Update UI
+        const originalButtonText = submitButton.innerHTML;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Uploading...';
+        submitButton.disabled = true;
+        resultContainer.innerHTML = '<div class="text-info">Uploading...</div>';
+
+        try {
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${getApiKey()}`
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                resultContainer.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6>Upload Successful!</h6>
+                        <ul class="mb-0 small">
+                            <li>Imported: ${data.result.imported}</li>
+                            <li>Updated: ${data.result.updated}</li>
+                            <li>Total: ${data.result.total_processed}</li>
+                            ${data.result.errors.length > 0 ? `<li class="text-warning">Errors: ${data.result.errors.length}</li>` : ''}
+                        </ul>
+                    </div>
+                `;
+                
+                // Clear file input
+                fileInput.value = '';
+                
+                // Refresh summary
+                setTimeout(loadSummary, 1000);
+            } else {
+                throw new Error(data.detail || 'Upload failed');
+            }
+        } catch (error) {
+            resultContainer.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+        } finally {
+            submitButton.innerHTML = originalButtonText;
+            submitButton.disabled = false;
+        }
+    }
+
+    async function loadSummary() {
+        const container = document.getElementById('upload-summary');
+        container.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Loading...';
+
+        try {
+            // This would call a summary endpoint - for now, mock data
+            const summary = {
+                total_orders: 150,
+                total_items: 1200,
+                total_bins: 85,
+                total_allocations: 1180,
+                last_updated: new Date().toISOString()
+            };
+
+            container.innerHTML = `
+                <table class="table table-sm">
+                    <tr><td>Orders:</td><td><strong>${summary.total_orders}</strong></td></tr>
+                    <tr><td>Items:</td><td><strong>${summary.total_items}</strong></td></tr>
+                    <tr><td>Bins:</td><td><strong>${summary.total_bins}</strong></td></tr>
+                    <tr><td>Allocations:</td><td><strong>${summary.total_allocations}</strong></td></tr>
+                </table>
+                <small class="text-muted">Last updated: ${new Date(summary.last_updated).toLocaleString()}</small>
+            `;
+        } catch (error) {
+            container.innerHTML = `<div class="alert alert-danger">Error loading summary: ${error.message}</div>`;
+        }
+    }
+
+    function downloadSample(type) {
+        const samples = {
+            orders: `order_id,ship_date,sku,qty,item_ids
+SO-1001,2025-08-17,SKU-5566,2,"[""PALT-0001"",""PALT-0002""]"
+SO-1002,2025-08-17,SKU-8899,1,
+SO-1003,2025-08-18,SKU-7777,3,"[""PALT-0003"",""PALT-0004"",""PALT-0005""]"`,
+            
+            allocations: `item_id,bin_id,status
+PALT-0001,A54,allocated
+PALT-0002,A52,allocated
+PALT-0003,A51,allocated
+PALT-0004,S-01,staged
+PALT-0005,A53,allocated`,
+            
+            bins: `bin_id,zone,coords
+A51,Zone-A,10,20
+A52,Zone-A,30,20
+A53,Zone-A,50,20
+A54,Zone-A,70,20
+S-01,Staging,10,100
+S-02,Staging,30,100`
+        };
+
+        const content = samples[type];
+        const blob = new Blob([content], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sample_${type}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+
+    function getApiKey() {
+        return 'changeme-supersecret';
+    }
+
+    // Load summary on page load
+    document.addEventListener('DOMContentLoaded', loadSummary);
+</script>
+{% endblock %}

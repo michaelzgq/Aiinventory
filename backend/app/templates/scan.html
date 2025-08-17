@@ -1,0 +1,219 @@
+{% extends "layout.html" %}
+
+{% block title %}Scan/Photo - Inventory AI{% endblock %}
+
+{% block extra_head %}
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-camera"></i> Scan/Photo Mode</h1>
+        <p class="lead">Scan QR codes or take photos of bins and items</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-video"></i> Camera Preview</h5>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="scan-mode" id="bin-mode" checked>
+                    <label class="btn btn-outline-primary" for="bin-mode">Bin Mode</label>
+                    
+                    <input type="radio" class="btn-check" name="scan-mode" id="item-mode">
+                    <label class="btn btn-outline-primary" for="item-mode">Item Mode</label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <video id="camera-preview" class="img-fluid border rounded" style="max-width: 100%; max-height: 400px;" autoplay muted></video>
+                    <canvas id="capture-canvas" style="display: none;"></canvas>
+                </div>
+                
+                <div class="mt-3 text-center">
+                    <button id="start-camera" class="btn btn-success me-2">
+                        <i class="fas fa-play"></i> Start Camera
+                    </button>
+                    <button id="stop-camera" class="btn btn-danger me-2" disabled>
+                        <i class="fas fa-stop"></i> Stop Camera
+                    </button>
+                    <button id="capture-photo" class="btn btn-primary me-2" disabled>
+                        <i class="fas fa-camera"></i> Capture Photo
+                    </button>
+                    <button id="multi-capture" class="btn btn-warning" disabled>
+                        <i class="fas fa-images"></i> Multi-Capture (3x)
+                    </button>
+                </div>
+
+                <div class="mt-3">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="manual-bin-id" placeholder="Optional: Manual bin ID">
+                        <label for="manual-bin-id">Manual Bin ID (optional)</label>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="capture-notes" placeholder="Optional notes">
+                        <label for="capture-notes">Notes (optional)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Instructions</h5>
+            </div>
+            <div class="card-body">
+                <div id="bin-mode-instructions">
+                    <h6>Bin Mode:</h6>
+                    <ul class="small">
+                        <li>Point camera at bin location</li>
+                        <li>Capture items in the bin</li>
+                        <li>QR codes will be decoded automatically</li>
+                        <li>Bin ID will be detected via OCR</li>
+                        <li>Use multi-capture for better accuracy</li>
+                    </ul>
+                </div>
+                <div id="item-mode-instructions" style="display: none;">
+                    <h6>Item Mode:</h6>
+                    <ul class="small">
+                        <li>Point camera at specific items</li>
+                        <li>Focus on QR codes for best results</li>
+                        <li>Browser will try to decode QR in real-time</li>
+                        <li>Specify bin ID manually if needed</li>
+                    </ul>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>Tips:</h6>
+                    <ul class="small text-muted">
+                        <li>Ensure good lighting</li>
+                        <li>Hold camera steady</li>
+                        <li>Get close to QR codes</li>
+                        <li>Avoid glare on labels</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-list"></i> Live Detection</h5>
+            </div>
+            <div class="card-body">
+                <div id="live-detection">
+                    <p class="text-muted">Start camera to see live QR detection</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Capture Results</h5>
+            </div>
+            <div class="card-body">
+                <div id="capture-results">
+                    <p class="text-muted">No captures yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', path='js/scan.js') }}"></script>
+<script>
+    // Initialize scanning interface
+    const scanInterface = new ScanInterface();
+    
+    // Mode switching
+    document.querySelectorAll('input[name="scan-mode"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const binMode = document.getElementById('bin-mode').checked;
+            document.getElementById('bin-mode-instructions').style.display = binMode ? 'block' : 'none';
+            document.getElementById('item-mode-instructions').style.display = binMode ? 'none' : 'block';
+            scanInterface.setMode(binMode ? 'bin' : 'item');
+        });
+    });
+
+    // Voice feedback (if supported)
+    function speak(text) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.2;
+            speechSynthesis.speak(utterance);
+        }
+    }
+
+    // Update live detection display
+    function updateLiveDetection(codes) {
+        const container = document.getElementById('live-detection');
+        if (codes.length === 0) {
+            container.innerHTML = '<p class="text-muted">No QR codes detected</p>';
+        } else {
+            const html = codes.map(code => 
+                `<span class="badge bg-success me-1">${code}</span>`
+            ).join('');
+            container.innerHTML = `<p><strong>Detected:</strong><br>${html}</p>`;
+        }
+    }
+
+    // Display capture results
+    function displayCaptureResult(result) {
+        const container = document.getElementById('capture-results');
+        const timestamp = new Date().toLocaleTimeString();
+        
+        const alertClass = result.conf > 0.8 ? 'success' : result.conf > 0.5 ? 'warning' : 'danger';
+        const statusText = result.conf > 0.8 ? '✓ Excellent' : result.conf > 0.5 ? '⚠ Good' : '⚠ Poor';
+        
+        const html = `
+            <div class="alert alert-${alertClass} d-flex justify-content-between align-items-start">
+                <div>
+                    <h6>${statusText} - ${timestamp}</h6>
+                    <p class="mb-1"><strong>Bin:</strong> ${result.bin_id || 'Not detected'}</p>
+                    <p class="mb-1"><strong>Items:</strong> ${result.item_ids.join(', ') || 'None detected'}</p>
+                    <p class="mb-0"><strong>Confidence:</strong> ${(result.conf * 100).toFixed(0)}%</p>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted">ID: ${result.snapshot_id || 'N/A'}</small>
+                </div>
+            </div>
+        `;
+        
+        if (container.innerHTML.includes('No captures yet')) {
+            container.innerHTML = html;
+        } else {
+            container.insertAdjacentHTML('afterbegin', html);
+        }
+        
+        // Voice feedback
+        if (result.bin_id) {
+            if (result.item_ids.length > 0) {
+                speak(`Bin ${result.bin_id} has ${result.item_ids.length} items`);
+            } else {
+                speak(`Bin ${result.bin_id} appears empty`);
+            }
+        } else if (result.item_ids.length > 0) {
+            speak(`Found ${result.item_ids.length} items`);
+        } else {
+            speak('No items detected');
+        }
+    }
+
+    // Set up event listeners
+    scanInterface.onLiveDetection = updateLiveDetection;
+    scanInterface.onCaptureResult = displayCaptureResult;
+</script>
+{% endblock %}
