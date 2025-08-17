@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: inventory-ai
+    runtime: docker
+    dockerfilePath: ./docker/Dockerfile
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: API_KEY
+        generateValue: true
+      - key: DB_URL
+        fromDatabase:
+          name: inventory-db
+          property: connectionString
+      - key: TZ
+        value: America/Los_Angeles
+      - key: USE_PADDLE_OCR
+        value: false
+      - key: STAGING_BINS
+        value: S-01,S-02,S-03,S-04
+      - key: STAGING_THRESHOLD_HOURS
+        value: 12
+      - key: STORAGE_BACKEND
+        value: local
+      - key: STORAGE_LOCAL_DIR
+        value: /app/storage
+    healthCheckPath: /health
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - backend/**
+        - docker/**
+        - requirements.txt
+        - Procfile
+
+databases:
+  - name: inventory-db
+    databaseName: inventory_ai
+    plan: starter
+    postgresMajorVersion: 15

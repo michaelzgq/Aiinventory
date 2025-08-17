@@ -1,0 +1,28 @@
+# 简化版 Render 配置（使用 Python 环境）
+services:
+  - type: web
+    name: inventory-ai-simple
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python server.py"
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: API_KEY
+        generateValue: true
+      - key: DB_URL
+        value: sqlite:///./inventory.db
+      - key: TZ
+        value: America/Los_Angeles
+      - key: USE_PADDLE_OCR
+        value: false
+      - key: STAGING_BINS
+        value: S-01,S-02,S-03,S-04
+      - key: STAGING_THRESHOLD_HOURS
+        value: 12
+      - key: STORAGE_BACKEND
+        value: local
+      - key: STORAGE_LOCAL_DIR
+        value: ./storage
+    healthCheckPath: /health
+    autoDeploy: true

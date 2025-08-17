@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/app/main.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.11"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/backend/app/static/$1"
+    },
+    {
+      "src": "/storage/(.*)",
+      "dest": "/storage/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/backend/app/main.py"
+    }
+  ],
+  "env": {
+    "APP_ENV": "production",
+    "API_KEY": "@inventory_api_key",
+    "DB_URL": "sqlite:///./inventory.db",
+    "TZ": "America/Los_Angeles",
+    "USE_PADDLE_OCR": "false",
+    "STAGING_BINS": "S-01,S-02,S-03,S-04",
+    "STAGING_THRESHOLD_HOURS": "12",
+    "STORAGE_BACKEND": "local",
+    "STORAGE_LOCAL_DIR": "/tmp/storage"
+  },
+  "functions": {
+    "backend/app/main.py": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  }
+}
