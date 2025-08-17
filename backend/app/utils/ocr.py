@@ -1,5 +1,3 @@
-import cv2
-import numpy as np
 import re
 from typing import Optional, Tuple
 import logging
@@ -7,10 +5,19 @@ from ..config import settings
 
 logger = logging.getLogger(__name__)
 
+# Check for OpenCV availability
+try:
+    import cv2
+    import numpy as np
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+    logger.warning("OpenCV not available")
+
 # Try to import PaddleOCR
 PADDLE_OCR_AVAILABLE = False
 try:
-    if settings.use_paddle_ocr:
+    if settings.use_paddle_ocr and OPENCV_AVAILABLE:
         from paddleocr import PaddleOCR
         PADDLE_OCR_AVAILABLE = True
         logger.info("PaddleOCR initialized successfully")
