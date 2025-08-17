@@ -9,10 +9,9 @@ pydantic-settings==2.0.3
 # 数据库
 sqlalchemy==2.0.23
 
-# 基础计算机视觉 (不包含PaddleOCR)
-opencv-python-headless==4.8.1.78
-numpy==1.24.4
+# 基础图像处理 (简化版，避免复杂依赖)
 pillow==10.1.0
+numpy==1.24.4
 
 # 文档生成 (简化版)
 openpyxl==3.1.2
