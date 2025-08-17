@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/app.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.11"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/backend/app/static/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/app.py"
+    }
+  ],
+  "env": {
+    "PYTHONPATH": "/var/task:/var/task/backend"
+  },
+  "functions": {
+    "api/app.py": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
+  "regions": ["sfo1"]
+}
