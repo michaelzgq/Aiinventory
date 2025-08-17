@@ -44,61 +44,164 @@ class handler(BaseHTTPRequestHandler):
             response = {"items": [], "count": 0, "message": "No items in inventory"}
         elif path == '/dashboard':
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             
-            html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Inventory AI Dashboard</title>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-                    .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
-                    .header { text-align: center; margin-bottom: 30px; }
-                    .status { color: #22c55e; font-weight: bold; }
-                    .card { border: 1px solid #ddd; padding: 20px; margin: 10px 0; border-radius: 5px; }
-                    .api-link { display: inline-block; padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 4px; margin: 4px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>🏭 Inventory AI Dashboard</h1>
-                        <p>Running on Vercel Serverless</p>
-                    </div>
-                    
-                    <div class="card">
-                        <h3>📊 System Status</h3>
-                        <p class="status">✅ System Online</p>
-                        <p><strong>Platform:</strong> Vercel Serverless</p>
-                        <p><strong>Environment:</strong> Production</p>
-                    </div>
-                    
-                    <div class="card">
-                        <h3>🚀 Quick Actions</h3>
-                        <a href="/api/bins" class="api-link">📦 View Bins</a>
-                        <a href="/api/inventory" class="api-link">📋 Inventory</a>
-                        <a href="/health" class="api-link">❤️ Health</a>
-                    </div>
-                    
-                    <div class="card">
-                        <h3>🔗 Available Endpoints</h3>
-                        <ul>
-                            <li>GET / - Main status</li>
-                            <li>GET /health - Health check</li>
-                            <li>GET /api/bins - List bins</li>
-                            <li>GET /api/inventory - List inventory</li>
-                            <li>GET /dashboard - This dashboard</li>
-                        </ul>
-                    </div>
-                </div>
-            </body>
-            </html>
-            """
+            html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory AI Dashboard</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 40px; 
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .header h1 { 
+            color: #333; 
+            margin: 0 0 10px 0; 
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        .header p { 
+            color: #666; 
+            margin: 0;
+            font-size: 1.2em;
+        }
+        .cards { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 25px; 
+        }
+        .card { 
+            border: none;
+            padding: 25px; 
+            margin: 0;
+            border-radius: 15px; 
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .card h3 { 
+            margin-top: 0; 
+            color: #333; 
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+        .status { 
+            color: #28a745; 
+            font-weight: bold; 
+            font-size: 1.1em;
+        }
+        .api-link { 
+            display: inline-block; 
+            padding: 12px 20px; 
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            margin: 8px; 
+            font-weight: 500;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+        }
+        .api-link:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,123,255,0.4);
+        }
+        .endpoint-list {
+            list-style: none;
+            padding: 0;
+        }
+        .endpoint-list li {
+            background: #e9ecef;
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            border-left: 3px solid #6c757d;
+        }
+        .badge {
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏭 Inventory AI Dashboard</h1>
+            <p>Advanced Inventory Management System <span class="badge">LIVE</span></p>
+        </div>
+        
+        <div class="cards">
+            <div class="card">
+                <h3>📊 System Status</h3>
+                <p class="status">✅ System Online</p>
+                <p><strong>Platform:</strong> Vercel Serverless</p>
+                <p><strong>Environment:</strong> Production</p>
+                <p><strong>Runtime:</strong> Python 3.12</p>
+            </div>
+            
+            <div class="card">
+                <h3>🚀 Quick Actions</h3>
+                <a href="/api/bins" class="api-link">📦 View Bins</a>
+                <a href="/api/inventory" class="api-link">📋 Inventory</a>
+                <a href="/health" class="api-link">❤️ Health Check</a>
+            </div>
+            
+            <div class="card">
+                <h3>🔗 API Endpoints</h3>
+                <ul class="endpoint-list">
+                    <li>GET / - System status</li>
+                    <li>GET /health - Health check</li>
+                    <li>GET /api/bins - List all bins</li>
+                    <li>GET /api/inventory - View inventory</li>
+                    <li>GET /dashboard - This dashboard</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h3>📈 Features</h3>
+                <ul>
+                    <li>✅ REST API</li>
+                    <li>✅ Bin Management</li>
+                    <li>✅ Inventory Tracking</li>
+                    <li>✅ Real-time Status</li>
+                    <li>✅ Cross-Origin Support</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>"""
             self.wfile.write(html.encode())
             return
         else:
