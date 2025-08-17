@@ -15,10 +15,5 @@
   "env": {
     "USE_PADDLE_OCR": "false",
     "APP_ENV": "production"
-  },
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 30
-    }
   }
 }
