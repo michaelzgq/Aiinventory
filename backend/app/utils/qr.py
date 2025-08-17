@@ -3,13 +3,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Check if OpenCV is available
+# Check if OpenCV and numpy are available
 try:
     import cv2
     import numpy as np
     OPENCV_AVAILABLE = True
 except ImportError:
     OPENCV_AVAILABLE = False
+    # Create dummy numpy for type hints
+    class np:
+        ndarray = object
+        uint8 = object
     logger.warning("OpenCV not available - QR detection disabled")
 
 

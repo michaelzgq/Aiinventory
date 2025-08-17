@@ -5,13 +5,16 @@ from ..config import settings
 
 logger = logging.getLogger(__name__)
 
-# Check for OpenCV availability
+# Check for OpenCV and numpy availability
 try:
     import cv2
     import numpy as np
     OPENCV_AVAILABLE = True
 except ImportError:
     OPENCV_AVAILABLE = False
+    # Create dummy numpy for type hints
+    class np:
+        ndarray = object
     logger.warning("OpenCV not available")
 
 # Try to import PaddleOCR
@@ -127,6 +130,10 @@ class BinOCRDetector:
 
 def extract_bin_from_image(image_bytes: bytes) -> Tuple[Optional[str], float]:
     """Extract bin ID from image bytes"""
+    if not OPENCV_AVAILABLE:
+        logger.warning("OpenCV not available - bin extraction disabled")
+        return None, 0.0
+        
     try:
         # Convert bytes to numpy array
         nparr = np.frombuffer(image_bytes, np.uint8)
