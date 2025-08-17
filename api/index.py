@@ -17,32 +17,8 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         
         # Route handling
-        if path == '/':
-            response = {
-                "message": "🏭 Inventory AI - Running on Vercel",
-                "status": "running",
-                "platform": "vercel",
-                "version": "2.0.0",
-                "features": ["REST API", "Health Check", "Basic Inventory", "Dashboard"]
-            }
-        elif path == '/health':
-            response = {
-                "status": "healthy",
-                "platform": "vercel", 
-                "database": "in-memory",
-                "timestamp": "2024-01-01"
-            }
-        elif path == '/api/bins':
-            bins = [
-                {"id": "A01", "location": "Aisle A, Level 1", "capacity": 100},
-                {"id": "A02", "location": "Aisle A, Level 2", "capacity": 100},
-                {"id": "B01", "location": "Aisle B, Level 1", "capacity": 150},
-                {"id": "S-01", "location": "Staging Area 1", "capacity": 200}
-            ]
-            response = {"bins": bins, "count": len(bins)}
-        elif path == '/api/inventory':
-            response = {"items": [], "count": 0, "message": "No items in inventory"}
-        elif path == '/dashboard':
+        if path == '/' or path == '/dashboard':
+            # Return HTML dashboard for root path and /dashboard
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -174,17 +150,17 @@ class handler(BaseHTTPRequestHandler):
                 <h3>🚀 Quick Actions</h3>
                 <a href="/api/bins" class="api-link">📦 View Bins</a>
                 <a href="/api/inventory" class="api-link">📋 Inventory</a>
-                <a href="/health" class="api-link">❤️ Health Check</a>
+                <a href="/api/status" class="api-link">📊 JSON Status</a>
             </div>
             
             <div class="card">
                 <h3>🔗 API Endpoints</h3>
                 <ul class="endpoint-list">
-                    <li>GET / - System status</li>
+                    <li>GET /api/status - JSON status</li>
                     <li>GET /health - Health check</li>
                     <li>GET /api/bins - List all bins</li>
                     <li>GET /api/inventory - View inventory</li>
-                    <li>GET /dashboard - This dashboard</li>
+                    <li>GET / - This dashboard</li>
                 </ul>
             </div>
             
@@ -196,6 +172,7 @@ class handler(BaseHTTPRequestHandler):
                     <li>✅ Inventory Tracking</li>
                     <li>✅ Real-time Status</li>
                     <li>✅ Cross-Origin Support</li>
+                    <li>✅ Modern UI Dashboard</li>
                 </ul>
             </div>
         </div>
@@ -204,6 +181,31 @@ class handler(BaseHTTPRequestHandler):
 </html>"""
             self.wfile.write(html.encode())
             return
+        elif path == '/api/status':
+            response = {
+                "message": "🏭 Inventory AI - Running on Vercel",
+                "status": "running",
+                "platform": "vercel",
+                "version": "2.0.0",
+                "features": ["REST API", "Health Check", "Basic Inventory", "Dashboard"]
+            }
+        elif path == '/health':
+            response = {
+                "status": "healthy",
+                "platform": "vercel", 
+                "database": "in-memory",
+                "timestamp": "2024-01-01"
+            }
+        elif path == '/api/bins':
+            bins = [
+                {"id": "A01", "location": "Aisle A, Level 1", "capacity": 100},
+                {"id": "A02", "location": "Aisle A, Level 2", "capacity": 100},
+                {"id": "B01", "location": "Aisle B, Level 1", "capacity": 150},
+                {"id": "S-01", "location": "Staging Area 1", "capacity": 200}
+            ]
+            response = {"bins": bins, "count": len(bins)}
+        elif path == '/api/inventory':
+            response = {"items": [], "count": 0, "message": "No items in inventory"}
         else:
             response = {"error": "Not Found", "path": path, "message": "Endpoint not available"}
             self.send_response(404)
