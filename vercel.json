@@ -1,15 +1,13 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/handler.py",
-      "use": "@vercel/python"
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.9"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/api/handler.py"
+      "source": "/(.*)",
+      "destination": "/api/index.py"
     }
   ]
 }

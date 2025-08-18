@@ -1,0 +1,15 @@
+# Ignore backend folder to prevent import issues
+backend/
+tests/
+docker/
+storage/
+sample_data/
+*.db
+*.sqlite
+.env
+.env.*
+__pycache__/
+*.pyc
+requirements.txt
+requirements-*.txt
+!api/requirements.txt
