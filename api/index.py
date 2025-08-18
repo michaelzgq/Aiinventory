@@ -1,174 +1,65 @@
-# Vercel Serverless Function - Ultra Simple
-def handler(request):
-    """Main handler for Vercel"""
-    
-    # Get path from request
-    path = request.url if hasattr(request, 'url') else '/'
-    if '?' in path:
-        path = path.split('?')[0]
-    
-    # Home page
-    if path == '/' or path == '':
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Content-Type': 'text/html; charset=utf-8',
-                'Cache-Control': 'no-cache'
-            },
-            'body': '''<!DOCTYPE html>
-<html lang="zh-CN">
+from http.server import BaseHTTPRequestHandler
+
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            html = '''
+<!DOCTYPE html>
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory AI</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #f3f4f6;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        .header {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        h1 {
-            color: #1f2937;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        .status {
-            display: inline-block;
-            background: #10b981;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        .card-value {
-            font-size: 3em;
-            font-weight: bold;
-            color: #3b82f6;
-            margin-bottom: 10px;
-        }
-        .card-label {
-            color: #6b7280;
-        }
-        .actions {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .btn {
-            display: inline-block;
-            margin: 10px;
-            padding: 12px 24px;
-            background: #3b82f6;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.3s;
-        }
-        .btn:hover {
-            background: #2563eb;
-            transform: translateY(-2px);
-        }
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 800px; margin: 0 auto; }
+        h1 { color: #333; text-align: center; }
+        .status { text-align: center; color: #10b981; margin: 20px 0; }
+        .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 30px 0; }
+        .stat { background: #f9fafb; padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 2em; font-weight: bold; color: #3b82f6; }
+        .links { text-align: center; margin-top: 30px; }
+        .link { display: inline-block; margin: 10px; padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>📦 Inventory AI</h1>
-            <p style="color: #6b7280; margin: 15px 0;">智能库存管理系统</p>
-            <span class="status">运行正常</span>
-        </div>
-        
-        <div class="grid">
-            <div class="card">
-                <div class="card-value">2</div>
-                <div class="card-label">今日订单</div>
+        <h1>📦 Inventory AI</h1>
+        <p class="status">✅ System Running on Vercel</p>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">2</div>
+                <div>Orders Today</div>
             </div>
-            <div class="card">
-                <div class="card-value">0</div>
-                <div class="card-label">快照记录</div>
-            </div>
-            <div class="card">
-                <div class="card-value">0</div>
-                <div class="card-label">异常项目</div>
-            </div>
-            <div class="card">
-                <div class="card-value">4</div>
-                <div class="card-label">货位总数</div>
+            <div class="stat">
+                <div class="stat-value">4</div>
+                <div>Total Bins</div>
             </div>
         </div>
-        
-        <div class="actions">
-            <h2 style="margin-bottom: 20px;">快速访问</h2>
-            <a href="/health" class="btn">健康检查</a>
-            <a href="/api/status" class="btn">API 状态</a>
-            <a href="/api/bins" class="btn">货位列表</a>
-            <p style="margin-top: 30px; color: #6b7280;">
-                平台：Vercel | 版本：2.0.0 | 
-                <a href="https://github.com/michaelzgq/Aiinventory" style="color: #3b82f6;">GitHub</a>
-            </p>
+        <div class="links">
+            <a href="/health" class="link">Health Check</a>
+            <a href="/api/status" class="link">API Status</a>
         </div>
     </div>
 </body>
-</html>'''
-        }
-    
-    # API endpoints
-    headers = {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-    }
-    
-    if path == '/health':
-        return {
-            'statusCode': 200,
-            'headers': headers,
-            'body': '{"status": "healthy", "platform": "vercel"}'
-        }
-    
-    elif path == '/api/status':
-        return {
-            'statusCode': 200,
-            'headers': headers,
-            'body': '{"message": "Inventory AI - Running on Vercel", "status": "ok"}'
-        }
-    
-    elif path == '/api/bins':
-        return {
-            'statusCode': 200,
-            'headers': headers,
-            'body': '{"bins": [{"id": "A51"}, {"id": "A52"}, {"id": "A53"}, {"id": "A54"}], "total": 4}'
-        }
-    
-    # 404 for other paths
-    return {
-        'statusCode': 404,
-        'headers': headers,
-        'body': '{"error": "Not Found"}'
-    }
+</html>
+'''
+            self.wfile.write(html.encode())
+        elif self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"status": "healthy"}')
+        elif self.path == '/api/status':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"status": "running", "platform": "vercel"}')
+        else:
+            self.send_response(404)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'Not Found')
+        return
