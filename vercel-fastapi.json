@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/app/main.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.11"
+      }
+    },
+    {
+      "src": "backend/app/static/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/backend/app/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/backend/app/main.py"
+    }
+  ],
+  "env": {
+    "PYTHONPATH": "/var/task:/var/task/backend"
+  },
+  "functions": {
+    "backend/app/main.py": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
+}
