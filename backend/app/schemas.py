@@ -71,6 +71,28 @@ class Snapshot(SnapshotBase):
         from_attributes = True
 
 
+# 新增的快照相关 schema
+class SnapshotResponse(BaseModel):
+    id: int
+    ts: datetime
+    bin_id: Optional[str] = None
+    item_ids: List[str]
+    photo_ref: Optional[str] = None
+    photo_url: Optional[str] = None
+    conf: float
+    notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class SnapshotList(BaseModel):
+    snapshots: List[SnapshotResponse]
+    total: int
+    limit: int
+    offset: int
+
+
 class OrderBase(BaseModel):
     order_id: str
     ship_date: date
