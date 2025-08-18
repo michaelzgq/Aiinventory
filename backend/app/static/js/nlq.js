@@ -405,7 +405,9 @@ class NLQInterface {
     }
     
     getApiKey() {
-        return 'changeme-supersecret';
+        // 从环境变量或配置中获取 API Key
+        // 在 Render 部署时，API_KEY 环境变量会自动设置
+        return window.API_KEY || 'demo-key';
     }
     
     // Utility method to retry query

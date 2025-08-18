@@ -165,43 +165,72 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
 <script>
     // Load dashboard data
     async function loadDashboardData() {
         try {
-            // Load reconciliation status
-            const statusResponse = await fetch('/api/reconcile/status', {
-                headers: {'Authorization': `Bearer ${getApiKey()}`}
-            });
-            const statusData = await statusResponse.json();
-            
-            document.getElementById('today-orders').textContent = statusData.today_orders;
-            document.getElementById('today-snapshots').textContent = statusData.today_snapshots;
-            document.getElementById('today-anomalies').textContent = statusData.today_anomalies;
-            document.getElementById('bins-scanned').textContent = statusData.total_bins_scanned;
-
             // Load recent snapshots
-            const snapshotsResponse = await fetch('/api/snapshots?limit=5', {
-                headers: {'Authorization': `Bearer ${getApiKey()}`}
-            });
-            const snapshotsData = await snapshotsResponse.json();
-            displayRecentSnapshots(snapshotsData);
+            await loadRecentSnapshots();
 
             // Load recent anomalies
-            const anomaliesResponse = await fetch('/api/reconcile/anomalies?limit=5', {
-                headers: {'Authorization': `Bearer ${getApiKey()}`}
-            });
-            const anomaliesData = await anomaliesResponse.json();
-            displayRecentAnomalies(anomaliesData);
+            await loadRecentAnomalies();
 
         } catch (error) {
             console.error('Error loading dashboard data:', error);
+            // Show error state
+            document.getElementById('recent-snapshots').innerHTML = 
+                '<div class="alert alert-warning">Failed to load snapshots</div>';
+            document.getElementById('recent-anomalies').innerHTML = 
+                '<div class="alert alert-warning">Failed to load anomalies</div>';
+        }
+    }
+
+    async function loadRecentSnapshots() {
+        try {
+            const response = await fetch('/api/snapshots?limit=5', {
+                headers: {
+                    'Authorization': `Bearer ${window.API_KEY}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                displayRecentSnapshots(data.snapshots || data || []);
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading snapshots:', error);
+            document.getElementById('recent-snapshots').innerHTML = 
+                '<div class="alert alert-info">No snapshots available</div>';
+        }
+    }
+
+    async function loadRecentAnomalies() {
+        try {
+            const response = await fetch('/api/reconcile/anomalies?limit=5', {
+                headers: {
+                    'Authorization': `Bearer ${window.API_KEY}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                displayRecentAnomalies(data.anomalies || data || []);
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading anomalies:', error);
+            document.getElementById('recent-anomalies').innerHTML = 
+                '<div class="alert alert-success">No anomalies found! 🎉</div>';
         }
     }
 
     function displayRecentSnapshots(snapshots) {
         const container = document.getElementById('recent-snapshots');
-        if (snapshots.length === 0) {
+        if (!snapshots || snapshots.length === 0) {
             container.innerHTML = '<p class="text-muted">No recent snapshots</p>';
             return;
         }
@@ -210,12 +239,12 @@
             <div class="d-flex justify-content-between align-items-center border-bottom py-2">
                 <div>
                     <strong>${snapshot.bin_id || 'Unknown Bin'}</strong><br>
-                    <small class="text-muted">${snapshot.item_ids.length} items</small>
+                    <small class="text-muted">${(snapshot.item_ids || []).length} items</small>
                 </div>
                 <div class="text-end">
                     <small>${new Date(snapshot.ts).toLocaleTimeString()}</small><br>
-                    <span class="badge bg-${snapshot.conf > 0.8 ? 'success' : snapshot.conf > 0.5 ? 'warning' : 'danger'}">
-                        ${(snapshot.conf * 100).toFixed(0)}%
+                    <span class="badge bg-${(snapshot.conf || 0) > 0.8 ? 'success' : (snapshot.conf || 0) > 0.5 ? 'warning' : 'danger'}">
+                        ${((snapshot.conf || 0) * 100).toFixed(0)}%
                     </span>
                 </div>
             </div>
@@ -226,7 +255,7 @@
 
     function displayRecentAnomalies(anomalies) {
         const container = document.getElementById('recent-anomalies');
-        if (anomalies.length === 0) {
+        if (!anomalies || anomalies.length === 0) {
             container.innerHTML = '<p class="text-muted text-success">No recent anomalies! 🎉</p>';
             return;
         }
@@ -235,9 +264,9 @@
             <div class="d-flex justify-content-between align-items-center border-bottom py-2">
                 <div>
                     <span class="badge bg-${anomaly.severity === 'high' ? 'danger' : anomaly.severity === 'med' ? 'warning' : 'info'}">
-                        ${anomaly.type}
+                        ${anomaly.type || 'Unknown'}
                     </span><br>
-                    <small class="text-muted">${anomaly.detail.substring(0, 50)}...</small>
+                    <small class="text-muted">${(anomaly.detail || '').substring(0, 50)}...</small>
                 </div>
                 <div class="text-end">
                     <small>${new Date(anomaly.ts).toLocaleTimeString()}</small>
@@ -263,7 +292,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${getApiKey()}`
+                    'Authorization': `Bearer ${window.API_KEY}`
                 },
                 body: JSON.stringify({text: query})
             });
@@ -307,11 +336,17 @@
         try {
             const response = await fetch('/api/reconcile/run', {
                 method: 'POST',
-                headers: {'Authorization': `Bearer ${getApiKey()}`}
+                headers: {
+                    'Authorization': `Bearer ${window.API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    date: new Date().toISOString().split('T')[0]
+                })
             });
             
             const data = await response.json();
-            alert(`Reconciliation completed! Found ${data.reconciliation.total_anomalies} anomalies.`);
+            alert(`Reconciliation completed! Found ${data.reconciliation?.total_anomalies || 0} anomalies.`);
             loadDashboardData(); // Refresh data
         } catch (error) {
             alert(`Error: ${error.message}`);
@@ -319,11 +354,6 @@
             button.innerHTML = originalText;
             button.disabled = false;
         }
-    }
-
-    // Helper function to get API key (in a real app, this would be more secure)
-    function getApiKey() {
-        return 'changeme-supersecret'; // This should be configured properly
     }
 
     // Enter key support for NLQ
@@ -334,6 +364,9 @@
     });
 
     // Load data on page load
-    document.addEventListener('DOMContentLoaded', loadDashboardData);
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait a bit for API_KEY to be available
+        setTimeout(loadDashboardData, 100);
+    });
 </script>
 {% endblock %}

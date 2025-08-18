@@ -95,7 +95,10 @@ if settings.storage_backend == "local":
 async def dashboard(request: Request, db: Session = Depends(get_db)):
     """Main dashboard page"""
     try:
-        return templates.TemplateResponse("index.html", {"request": request})
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "api_key": settings.api_key
+        })
     except Exception as e:
         logger.error(f"Error rendering dashboard: {e}")
         raise HTTPException(status_code=500, detail="Error loading dashboard")
@@ -105,7 +108,10 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
 async def scan_page(request: Request):
     """Scanning/photo capture page"""
     try:
-        return templates.TemplateResponse("scan.html", {"request": request})
+        return templates.TemplateResponse("scan.html", {
+            "request": request,
+            "api_key": settings.api_key
+        })
     except Exception as e:
         logger.error(f"Error rendering scan page: {e}")
         raise HTTPException(status_code=500, detail="Error loading scan page")
@@ -115,7 +121,10 @@ async def scan_page(request: Request):
 async def upload_page(request: Request):
     """Data upload page"""
     try:
-        return templates.TemplateResponse("upload_orders.html", {"request": request})
+        return templates.TemplateResponse("upload_orders.html", {
+            "request": request,
+            "api_key": settings.api_key
+        })
     except Exception as e:
         logger.error(f"Error rendering upload page: {e}")
         raise HTTPException(status_code=500, detail="Error loading upload page")
@@ -125,7 +134,10 @@ async def upload_page(request: Request):
 async def reconcile_page(request: Request):
     """Reconciliation and reports page"""
     try:
-        return templates.TemplateResponse("reconcile.html", {"request": request})
+        return templates.TemplateResponse("reconcile.html", {
+            "request": request,
+            "api_key": settings.api_key
+        })
     except Exception as e:
         logger.error(f"Error rendering reconcile page: {e}")
         raise HTTPException(status_code=500, detail="Error loading reconcile page")
