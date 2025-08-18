@@ -5,6 +5,7 @@ jinja2
 python-dotenv
 pydantic-settings
 sqlalchemy
+psycopg2-binary
 pillow
 python-dateutil
 requests

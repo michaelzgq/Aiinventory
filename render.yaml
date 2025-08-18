@@ -3,6 +3,8 @@ services:
     name: inventory-ai
     runtime: docker
     dockerfilePath: ./docker/Dockerfile.render
+    buildCommand: pip install -r requirements-render.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: APP_ENV
         value: production
@@ -30,7 +32,7 @@ services:
       paths:
         - backend/**
         - docker/**
-        - requirements.txt
+        - requirements-render.txt
         - .env.example
 
 databases:

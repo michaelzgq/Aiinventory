@@ -19,9 +19,9 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制并安装 Python 依赖
-COPY requirements.txt .
+COPY requirements-render.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements-render.txt
 
 # 复制应用代码
 COPY backend/ /app/backend/
