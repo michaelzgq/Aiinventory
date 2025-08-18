@@ -1,0 +1,30 @@
+# Vercel 环境变量 - 修正版（避免保留名称）
+
+## 请使用以下修正后的环境变量：
+
+API_KEY
+5b35ccc45997eadabdf54f5e42d1eca6d5f6bc806765340c49b952281d2bc67c
+
+APP_ENV
+production
+
+USE_PADDLE_OCR
+false
+
+STAGING_BINS
+S-01,S-02,S-03,S-04
+
+STAGING_THRESHOLD_HOURS
+12
+
+APP_TIMEZONE
+America/Los_Angeles
+
+STORAGE_BACKEND
+local
+
+STORAGE_LOCAL_DIR
+/tmp/storage
+
+DB_URL
+sqlite:////tmp/inventory.db
