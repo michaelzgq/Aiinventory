@@ -29,7 +29,12 @@ class BinOCRProcessor:
 		self.paddle_ocr = None
 		if self.use_paddle_ocr:
 			try:
-				self.paddle_ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False, show_log=False)
+				self.paddle_ocr = PaddleOCR(
+					use_angle_cls=True,  # 使用角度分类器
+					lang='ch',  # 中文模型
+					use_gpu=False,  # CPU 模式
+					show_log=False  # 不显示日志
+				)
 				logger.info("PaddleOCR 初始化成功")
 			except Exception as e:
 				logger.error(f"PaddleOCR 初始化失败: {e}")
@@ -99,6 +104,10 @@ class BinOCRProcessor:
 			return self._fallback_bin_recognition(image_data)
 	
 	def _fallback_bin_recognition(self, image_data: bytes) -> List[Dict[str, Any]]:
+		"""备用库位识别方案（当 PaddleOCR 不可用时）"""
+		logger.info("使用备用库位识别方案")
+		# 这里可以实现其他 OCR 方案，比如 Tesseract
+		# 或者返回空结果，提示用户手动输入
 		return []
 	
 	def validate_bin_id(self, bin_id: str) -> bool:
@@ -167,7 +176,6 @@ def validate_bin_id_format(bin_id: str) -> bool:
 
 
 # 向后兼容：提供旧的测试期望接口
-
 class BinOCRDetector:
 	def __init__(self):
 		self._proc = BinOCRProcessor()

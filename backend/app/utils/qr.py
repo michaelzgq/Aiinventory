@@ -3,15 +3,32 @@ QR Code and Barcode Detection using OpenCV
 支持 QR 码和一维码识别
 """
 
-import cv2
-import numpy as np
-from typing import List, Dict, Any, Optional, Tuple
 import logging
+from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 import base64
 import re
 
 logger = logging.getLogger(__name__)
+
+# 尝试导入 OpenCV
+try:
+    import cv2
+    import numpy as np
+    OPENCV_AVAILABLE = True
+    logger.info("OpenCV 已启用")
+except ImportError:
+    OPENCV_AVAILABLE = False
+    logger.warning("OpenCV 未安装，QR 检测功能将使用备用方案")
+    # 创建虚拟 numpy 以避免导入错误
+    class DummyNumpy:
+        def __array__(self): return []
+        def __getitem__(self, key): return self
+        def __setitem__(self, key, value): pass
+        def shape(self): return (0,)
+        def dtype(self): return 'uint8'
+        def astype(self, dtype): return self
+    np = DummyNumpy()
 
 
 class QRCodeDetector:
@@ -19,6 +36,12 @@ class QRCodeDetector:
 	
 	def __init__(self):
 		"""初始化检测器"""
+		if not OPENCV_AVAILABLE:
+			logger.warning("OpenCV 不可用，QR 检测器将使用备用方案")
+			self.qr_detector = None
+			self.detector = None
+			return
+			
 		self.qr_detector = cv2.QRCodeDetector()
 		self.zbar_detector = None
 		# 向后兼容：tests 里会检查 `.detector`
@@ -33,9 +56,11 @@ class QRCodeDetector:
 			logger.warning("ZBar 未安装，一维码检测功能受限")
 	
 	def detect_qr_codes(self, image: np.ndarray) -> List[Dict[str, Any]]:
-		"""
-		检测图像中的 QR 码
-		"""
+		"""检测图像中的 QR 码"""
+		if not OPENCV_AVAILABLE:
+			logger.warning("OpenCV 不可用，无法检测 QR 码")
+			return []
+			
 		try:
 			# 转换为灰度图
 			if len(image.shape) == 3:
@@ -70,9 +95,10 @@ class QRCodeDetector:
 			return []
 	
 	def detect_barcodes(self, image: np.ndarray) -> List[Dict[str, Any]]:
-		"""
-		检测图像中的一维码
-		"""
+		"""检测图像中的一维码"""
+		if not OPENCV_AVAILABLE:
+			return []
+			
 		if not self.zbar_detector:
 			return []
 		
@@ -109,6 +135,8 @@ class QRCodeDetector:
 	
 	def detect_all_codes(self, image: np.ndarray) -> List[Dict[str, Any]]:
 		"""检测图像中的所有码（QR + 一维码）"""
+		if not OPENCV_AVAILABLE:
+			return []
 		qr_results = self.detect_qr_codes(image)
 		barcode_results = self.detect_barcodes(image)
 		all_results = qr_results + barcode_results
@@ -117,6 +145,8 @@ class QRCodeDetector:
 	
 	# 兼容旧 tests：预处理应返回灰度 uint8
 	def preprocess_image(self, image: np.ndarray) -> np.ndarray:
+		if not OPENCV_AVAILABLE:
+			return image
 		try:
 			if len(image.shape) == 3:
 				gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -133,6 +163,8 @@ class QRCodeDetector:
 			return image
 	
 	def _rotate_image(self, image: np.ndarray, angle: int) -> np.ndarray:
+		if not OPENCV_AVAILABLE:
+			return image
 		try:
 			height, width = image.shape[:2]
 			center = (width // 2, height // 2)
@@ -144,6 +176,8 @@ class QRCodeDetector:
 	
 	def _calculate_region_confidence(self, gray_image: np.ndarray, bbox: Dict[str, int]) -> float:
 		"""根据图像区域质量估计置信度，用于检测结果"""
+		if not OPENCV_AVAILABLE:
+			return 0.5
 		try:
 			x, y, w, h = bbox['x'], bbox['y'], bbox['width'], bbox['height']
 			if x < 0 or y < 0 or x + w > gray_image.shape[1] or y + h > gray_image.shape[0]:
@@ -172,6 +206,8 @@ class QRCodeDetector:
 		return round(base_confidence, 2)
 	
 	def detect_from_file(self, image_path: str) -> List[Dict[str, Any]]:
+		if not OPENCV_AVAILABLE:
+			return []
 		try:
 			image = cv2.imread(image_path)
 			if image is None:
@@ -183,6 +219,8 @@ class QRCodeDetector:
 			return []
 	
 	def detect_from_base64(self, base64_string: str) -> List[Dict[str, Any]]:
+		if not OPENCV_AVAILABLE:
+			return []
 		try:
 			image_data = base64.b64decode(base64_string)
 			nparr = np.frombuffer(image_data, np.uint8)
@@ -196,6 +234,8 @@ class QRCodeDetector:
 			return []
 	
 	def _points_to_bbox(self, points: np.ndarray) -> Dict[str, int]:
+		if not OPENCV_AVAILABLE:
+			return {'x': 0, 'y': 0, 'width': 0, 'height': 0}
 		x_coords = [p[0] for p in points]
 		y_coords = [p[1] for p in points]
 		return {
@@ -206,6 +246,8 @@ class QRCodeDetector:
 		}
 	
 	def _zbar_bbox_to_bbox(self, rect) -> Dict[str, int]:
+		if not OPENCV_AVAILABLE:
+			return {'x': 0, 'y': 0, 'width': 0, 'height': 0}
 		return {
 			'x': rect.left,
 			'y': rect.top,
@@ -215,8 +257,10 @@ class QRCodeDetector:
 
 
 # 便捷函数：从图像字节中检测码（新接口）
-
 def detect_codes_from_image(image_data: bytes, enhance: bool = True) -> List[Dict[str, Any]]:
+	if not OPENCV_AVAILABLE:
+		logger.warning("OpenCV 不可用，无法检测图像中的码")
+		return []
 	try:
 		nparr = np.frombuffer(image_data, np.uint8)
 		image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -239,8 +283,9 @@ def detect_codes_from_image(image_data: bytes, enhance: bool = True) -> List[Dic
 
 
 # 兼容旧 tests：返回 (codes, confidence)
-
 def decode_image_bytes(image_bytes: bytes) -> Tuple[List[str], float]:
+	if not OPENCV_AVAILABLE:
+		return [], 0.0
 	try:
 		if not image_bytes:
 			return [], 0.0
@@ -259,7 +304,6 @@ def decode_image_bytes(image_bytes: bytes) -> Tuple[List[str], float]:
 
 
 # 兼容旧 tests：物品 ID 校验与过滤
-
 def is_valid_item_id(code: str) -> bool:
 	if not code or len(code) < 4:
 		return False
@@ -283,6 +327,5 @@ def filter_item_codes(codes: List[str]) -> List[str]:
 
 
 # 兼容：保持旧函数名
-
 def validate_qr_content(text: str) -> bool:
 	return is_valid_item_id(text) or bool(re.match(r'^[A-Z]\d{1,2}$', text)) or bool(re.match(r'^S-\d{1,2}$', text))

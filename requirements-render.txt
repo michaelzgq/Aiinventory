@@ -12,3 +12,17 @@ pillow==10.1.0
 python-dateutil==2.8.2
 requests==2.31.0
 aiofiles==23.2.1
+
+# 图像处理和计算机视觉
+opencv-python-headless==4.8.1.78
+numpy==1.24.3
+
+# 可选：OCR 支持（如果用户需要）
+# paddlepaddle==2.5.1
+# paddleocr==2.7.0
+
+# 可选：一维码检测
+# pyzbar==0.1.9
+
+# 报告生成
+reportlab==4.0.4
