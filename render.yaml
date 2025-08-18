@@ -2,7 +2,7 @@ services:
   - type: web
     name: inventory-ai
     runtime: docker
-    dockerfilePath: ./docker/Dockerfile.simple
+    dockerfilePath: ./docker/Dockerfile.render
     envVars:
       - key: APP_ENV
         value: production

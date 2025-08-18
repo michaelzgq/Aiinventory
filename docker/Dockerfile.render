@@ -1,46 +1,41 @@
-# Simple Dockerfile for Render deployment
+# Ultra-simple Dockerfile for Render deployment
+# 专门为 Render 优化的超简化版本
 FROM python:3.11-slim
 
-# Set environment variables
+# 设置环境变量
 ENV PYTHONPATH=/app
 ENV APP_ENV=production
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install only essential system dependencies
+# 设置工作目录
+WORKDIR /app
+
+# 只安装绝对必要的包
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    libc6-dev \
-    ca-certificates \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app
-
-# Copy requirements first for better caching
+# 复制并安装 Python 依赖
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# 复制应用代码
 COPY backend/ /app/backend/
 COPY .env.example /app/.env
 
-# Create storage directories
+# 创建存储目录
 RUN mkdir -p /app/storage/{photos,reports,temp}
 
-# Expose port
+# 暴露端口
 EXPOSE 8000
 
-# Health check
+# 健康检查
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run application
+# 启动应用
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
