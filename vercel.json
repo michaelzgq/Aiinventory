@@ -2,24 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/main.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "src": "api/handler.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/backend/app/static/$1"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/api/main.py"
+      "dest": "/api/handler.py"
     }
-  ],
-  "env": {
-    "PYTHONPATH": "/var/task:/var/task/backend"
-  }
+  ]
 }
