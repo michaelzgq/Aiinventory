@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgomp1 \
-    libglib2.0-0 \
     libgtk-3-0 \
     libavcodec-dev \
     libavformat-dev \
@@ -40,15 +39,16 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Production stage
 FROM python:3.11-slim
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
+# Install runtime dependencies with better error handling
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
     libxrender1 \
     libgomp1 \
     libgtk-3-0 \
-    libavcodec58 \
+    libavcodec-extra \
     libavformat58 \
     libswscale5 \
     libv4l-0 \
@@ -58,6 +58,8 @@ RUN apt-get update && apt-get install -y \
     libatlas3-base \
     wget \
     curl \
+    ca-certificates \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtual environment from builder

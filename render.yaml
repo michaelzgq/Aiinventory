@@ -2,7 +2,7 @@ services:
   - type: web
     name: inventory-ai
     runtime: docker
-    dockerfilePath: ./docker/Dockerfile
+    dockerfilePath: ./docker/Dockerfile.simple
     envVars:
       - key: APP_ENV
         value: production
@@ -12,14 +12,14 @@ services:
         fromDatabase:
           name: inventory-db
           property: connectionString
-      - key: TZ
+      - key: APP_TIMEZONE
         value: America/Los_Angeles
       - key: USE_PADDLE_OCR
-        value: false
+        value: "false"
       - key: STAGING_BINS
         value: S-01,S-02,S-03,S-04
       - key: STAGING_THRESHOLD_HOURS
-        value: 12
+        value: "12"
       - key: STORAGE_BACKEND
         value: local
       - key: STORAGE_LOCAL_DIR
@@ -31,7 +31,7 @@ services:
         - backend/**
         - docker/**
         - requirements.txt
-        - Procfile
+        - .env.example
 
 databases:
   - name: inventory-db
