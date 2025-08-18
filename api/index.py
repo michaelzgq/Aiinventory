@@ -8,20 +8,14 @@ class handler(BaseHTTPRequestHandler):
         parsed_path = urllib.parse.urlparse(self.path)
         path = parsed_path.path
         
-        # Set CORS headers
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
-        
         # Route handling
         if path == '/' or path == '/dashboard':
             # Return HTML dashboard for root path and /dashboard
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
             self.end_headers()
             
             html = """<!DOCTYPE html>
@@ -181,7 +175,11 @@ class handler(BaseHTTPRequestHandler):
 </html>"""
             self.wfile.write(html.encode())
             return
-        elif path == '/api/status':
+            
+        # Handle JSON API routes
+        status_code = 200  # Default status code
+        
+        if path == '/api/status':
             response = {
                 "message": "🏭 Inventory AI - Running on Vercel",
                 "status": "running",
@@ -208,10 +206,15 @@ class handler(BaseHTTPRequestHandler):
             response = {"items": [], "count": 0, "message": "No items in inventory"}
         else:
             response = {"error": "Not Found", "path": path, "message": "Endpoint not available"}
-            self.send_response(404)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
+            status_code = 404
+        
+        # Send JSON response headers
+        self.send_response(status_code)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
         
         # Send JSON response
         self.wfile.write(json.dumps(response, indent=2).encode())
