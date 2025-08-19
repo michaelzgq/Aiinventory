@@ -28,7 +28,8 @@ async def detailed_health_check(db: Session = Depends(get_db)):
     """Detailed health check including database connectivity"""
     try:
         # Check database connectivity
-        db.execute("SELECT 1")
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
         db_status = "connected"
         db_error = None
     except Exception as e:
@@ -119,7 +120,8 @@ async def database_health_check(db: Session = Depends(get_db)):
         from ..models import Order, Item, Bin, Allocation, Snapshot, Anomaly
         
         # Test basic connectivity
-        db.execute("SELECT 1")
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
         
         # Get table counts
         counts = {
@@ -216,7 +218,8 @@ async def readiness_check(db: Session = Depends(get_db)):
     """Kubernetes-style readiness check"""
     try:
         # Test database
-        db.execute("SELECT 1")
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
         
         # Test storage
         storage_dir = settings.storage_local_dir
