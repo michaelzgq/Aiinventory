@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 
 from .config import settings
 from .database import create_tables, get_db
-from .routers import orders, allocations, snapshots, reconcile, queries, labels, health, ingest
+from .routers import orders, allocations, snapshots, reconcile, queries, labels, health, ingest, bins, items
 
 # Configure logging
 logging.basicConfig(
@@ -83,6 +83,8 @@ app.include_router(queries.router, prefix="/api/nlq", tags=["queries"])
 app.include_router(labels.router, prefix="/api/labels", tags=["labels"])
 app.include_router(health.router, prefix="/health", tags=["health"])
 app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
+app.include_router(bins.router, prefix="/api/bins", tags=["bins"])
+app.include_router(items.router, prefix="/api/items", tags=["items"])
 
 # Serve storage files
 if settings.storage_backend == "local":

@@ -340,8 +340,8 @@ class ScanInterface {
     }
     
     getApiKey() {
-        // In a real app, this would be more secure
-        return 'changeme-supersecret';
+        // Get API key from window object or fallback
+        return window.API_KEY || 'changeme-supersecret';
     }
     
     sleep(ms) {
