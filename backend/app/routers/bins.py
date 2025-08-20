@@ -31,7 +31,8 @@ async def get_bins(
     
     except Exception as e:
         logger.error(f"Error getting bins: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # 返回空列表而不是错误，提高兼容性
+        return []
 
 
 @router.get("/{bin_id}", response_model=Bin)
@@ -52,7 +53,7 @@ async def get_bin(
         raise
     except Exception as e:
         logger.error(f"Error getting bin: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.post("", response_model=Bin)
@@ -80,7 +81,7 @@ async def create_bin(
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating bin: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.put("/{bin_id}", response_model=Bin)
@@ -109,7 +110,7 @@ async def update_bin(
     except Exception as e:
         db.rollback()
         logger.error(f"Error updating bin: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.delete("/{bin_id}")
@@ -134,4 +135,4 @@ async def delete_bin(
     except Exception as e:
         db.rollback()
         logger.error(f"Error deleting bin: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

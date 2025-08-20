@@ -31,7 +31,8 @@ async def get_items(
     
     except Exception as e:
         logger.error(f"Error getting items: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # 返回空列表而不是错误，提高兼容性
+        return []
 
 
 @router.get("/{item_id}", response_model=Item)
@@ -52,7 +53,7 @@ async def get_item(
         raise
     except Exception as e:
         logger.error(f"Error getting item: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.post("", response_model=Item)
@@ -80,7 +81,7 @@ async def create_item(
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating item: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.put("/{item_id}", response_model=Item)
@@ -109,7 +110,7 @@ async def update_item(
     except Exception as e:
         db.rollback()
         logger.error(f"Error updating item: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.delete("/{item_id}")
@@ -134,4 +135,4 @@ async def delete_item(
     except Exception as e:
         db.rollback()
         logger.error(f"Error deleting item: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

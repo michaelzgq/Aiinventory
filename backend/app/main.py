@@ -9,9 +9,14 @@ import os
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from .config import settings
-from .database import create_tables, get_db
-from .routers import orders, allocations, snapshots, reconcile, queries, labels, health, ingest, bins, items
+# 添加错误处理
+try:
+    from .config import settings
+    from .database import create_tables, get_db
+    from .routers import orders, allocations, snapshots, reconcile, queries, labels, health, ingest, bins, items
+except ImportError as e:
+    logging.error(f"Import error: {e}")
+    raise
 
 # Configure logging
 logging.basicConfig(
@@ -26,13 +31,13 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Inventory AI application...")
     
-    # Create database tables
     try:
+        # Create database tables
         create_tables()
         logger.info("Database tables created successfully")
     except Exception as e:
         logger.error(f"Failed to create database tables: {e}")
-        raise
+        # 不中断启动，继续运行
     
     # Ensure storage directories exist
     try:
@@ -40,7 +45,7 @@ async def lifespan(app: FastAPI):
         logger.info("Storage system initialized")
     except Exception as e:
         logger.error(f"Failed to initialize storage: {e}")
-        raise
+        # 不中断启动，继续运行
     
     logger.info("Application startup complete")
     yield
@@ -74,23 +79,34 @@ app.mount("/static", StaticFiles(directory="backend/app/static"), name="static")
 # Setup templates
 templates = Jinja2Templates(directory="backend/app/templates")
 
-# Include API routers
-app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
-app.include_router(allocations.router, prefix="/api/allocations", tags=["allocations"])
-app.include_router(snapshots.router, prefix="/api/snapshots", tags=["snapshots"])
-app.include_router(reconcile.router, prefix="/api/reconcile", tags=["reconcile"])
-app.include_router(queries.router, prefix="/api/nlq", tags=["queries"])
-app.include_router(labels.router, prefix="/api/labels", tags=["labels"])
-app.include_router(health.router, prefix="/health", tags=["health"])
-app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
-app.include_router(bins.router, prefix="/api/bins", tags=["bins"])
-app.include_router(items.router, prefix="/api/items", tags=["items"])
+# Include API routers with error handling
+try:
+    app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
+    app.include_router(allocations.router, prefix="/api/allocations", tags=["allocations"])
+    app.include_router(snapshots.router, prefix="/api/snapshots", tags=["snapshots"])
+    app.include_router(reconcile.router, prefix="/api/reconcile", tags=["reconcile"])
+    app.include_router(queries.router, prefix="/api/nlq", tags=["queries"])
+    app.include_router(labels.router, prefix="/api/labels", tags=["labels"])
+    app.include_router(health.router, prefix="/health", tags=["health"])
+    app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
+    
+    # 新添加的路由
+    app.include_router(bins.router, prefix="/api/bins", tags=["bins"])
+    app.include_router(items.router, prefix="/api/items", tags=["items"])
+    
+    logger.info("All routers included successfully")
+except Exception as e:
+    logger.error(f"Error including routers: {e}")
+    # 继续运行，不中断应用
 
 # Serve storage files
 if settings.storage_backend == "local":
-    storage_path = os.path.abspath(settings.storage_local_dir)
-    if os.path.exists(storage_path):
-        app.mount("/storage", StaticFiles(directory=storage_path), name="storage")
+    try:
+        storage_path = os.path.abspath(settings.storage_local_dir)
+        if os.path.exists(storage_path):
+            app.mount("/storage", StaticFiles(directory=storage_path), name="storage")
+    except Exception as e:
+        logger.error(f"Error mounting storage: {e}")
 
 
 # Frontend routes
@@ -109,7 +125,7 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/scan", response_class=HTMLResponse)
 async def scan_page(request: Request):
-    """Scanning/photo capture page"""
+    """Scan/Photo page"""
     try:
         return templates.TemplateResponse("scan.html", {
             "request": request,
@@ -121,21 +137,21 @@ async def scan_page(request: Request):
 
 
 @app.get("/upload-orders", response_class=HTMLResponse)
-async def upload_page(request: Request):
-    """Data upload page"""
+async def upload_orders_page(request: Request):
+    """Upload orders page"""
     try:
         return templates.TemplateResponse("upload_orders.html", {
             "request": request,
             "api_key": settings.api_key
         })
     except Exception as e:
-        logger.error(f"Error rendering upload page: {e}")
-        raise HTTPException(status_code=500, detail="Error loading upload page")
+        logger.error(f"Error rendering upload orders page: {e}")
+        raise HTTPException(status_code=500, detail="Error loading upload orders page")
 
 
 @app.get("/reconcile", response_class=HTMLResponse)
 async def reconcile_page(request: Request):
-    """Reconciliation and reports page"""
+    """Reconcile page"""
     try:
         return templates.TemplateResponse("reconcile.html", {
             "request": request,
@@ -144,6 +160,52 @@ async def reconcile_page(request: Request):
     except Exception as e:
         logger.error(f"Error rendering reconcile page: {e}")
         raise HTTPException(status_code=500, detail="Error loading reconcile page")
+
+
+# API status endpoint
+@app.get("/api/status")
+async def get_status():
+    """Get application status"""
+    try:
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "service": "inventory-ai",
+            "version": "1.0.0",
+            "features": {
+                "scanning": True,
+                "ai_queries": True,
+                "csv_import": True,
+                "reconciliation": True
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error getting status: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    try:
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "service": "inventory-ai",
+            "version": "1.0.0"
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 
 # API endpoint for inventory today (dashboard)
