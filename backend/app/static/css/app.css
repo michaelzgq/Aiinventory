@@ -465,3 +465,36 @@ body {
 .bg-primary .text-white {
     color: #ffffff !important;
 }
+
+/* Dashboard Specific Fixes */
+.card.bg-warning .card-body h2,
+.card.bg-warning .card-body .card-title {
+    color: #ffffff !important;
+}
+
+.card.bg-success .card-body h2,
+.card.bg-success .card-body .card-title {
+    color: #ffffff !important;
+}
+
+/* NLQ Answer Box - 强制深色文字 */
+#nlq-result .alert-info h6,
+#nlq-result .alert-info p,
+#nlq-result .alert-success h6,
+#nlq-result .alert-success p {
+    color: #0c5460 !important;
+}
+
+/* Recent Panels - 强制深色文字 */
+#recent-snapshots .text-muted,
+#recent-anomalies .text-muted {
+    color: #495057 !important;
+}
+
+/* 确保所有卡片中的数字都是白色 */
+.card.bg-warning h2,
+.card.bg-success h2,
+.card.bg-info h2,
+.card.bg-primary h2 {
+    color: #ffffff !important;
+}
