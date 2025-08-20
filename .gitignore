@@ -62,3 +62,24 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+
+# Core Code Protection - 核心代码保护
+# 这些文件包含核心实现，不应公开
+backend/app/services/ai_core/core_impl.py
+backend/app/services/business/core_logic.py
+backend/app/utils/encryption/real_encryption.py
+backend/app/config/production.py
+backend/app/config/secrets.py
+
+# 敏感配置文件
+config/production.env
+config/secrets.env
+secrets/
+keys/
+certificates/
+
+# 商业逻辑核心
+backend/app/services/business/profit_calculator.py
+backend/app/services/business/inventory_optimizer.py
+backend/app/services/ai_core/ml_models/
+backend/app/services/ai_core/neural_networks/
