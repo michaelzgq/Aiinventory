@@ -154,10 +154,10 @@ function displayOrders(orders = allOrders) {
     pageOrders.forEach(order => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="text-dark"><strong>${order.order_id}</strong></td>
-            <td class="text-dark">${formatDate(order.ship_date)}</td>
+            <td><span class="badge bg-primary">${order.order_id}</span></td>
+            <td><span class="badge bg-warning">${formatDate(order.ship_date)}</span></td>
             <td><span class="badge bg-info">${order.sku}</span></td>
-            <td class="text-dark"><span class="badge bg-secondary">${order.qty}</span></td>
+            <td><span class="badge bg-secondary">${order.qty}</span></td>
             <td>
                 <small class="text-muted">${order.item_ids ? order.item_ids.length : 0} items</small>
                 <button class="btn btn-sm btn-outline-primary ms-2" onclick="viewOrderDetails('${order.order_id}')">
