@@ -12,42 +12,33 @@ logger = logging.getLogger(__name__)
 class NaturalLanguageQueryService:
 	def __init__(self, db: Session):
 		self.db = db
+		# 尝试加载核心实现，如果不存在则使用占位符
+		self._load_core_implementation()
+	
+	def _load_core_implementation(self):
+		"""Load core implementation if available, otherwise use placeholder"""
+		try:
+			# 尝试导入核心实现
+			from .ai_core.core_impl import CoreNLQEngine
+			self.core_engine = CoreNLQEngine(self.db)
+			self.use_core = True
+			logger.info("Core NLQ engine loaded successfully")
+		except ImportError:
+			# 使用占位符实现
+			self.core_engine = None
+			self.use_core = False
+			logger.info("Using placeholder NLQ implementation")
 	
 	def process_query(self, query_text: str) -> Dict[str, Any]:
 		"""Process natural language query and return response"""
 		try:
-			query_text = query_text.strip().lower()
+			# 如果核心引擎可用，使用核心实现
+			if self.use_core and self.core_engine:
+				return self.core_engine.process_query(query_text)
 			
-			# Identify intent and extract entities
-			intent, entities = self._parse_intent(query_text)
+			# 否则使用占位符实现
+			return self._process_query_placeholder(query_text)
 			
-			if intent == "check_bin":
-				return self._handle_bin_query(entities.get("bin_id"))
-			
-			elif intent == "find_sku":
-				return self._handle_sku_query(entities.get("sku"))
-			
-			elif intent == "find_item":
-				return self._handle_item_query(entities.get("item_id"))
-			
-			elif intent == "export_report":
-				return self._handle_export_request(entities.get("date"))
-			
-			elif intent == "anomaly_stats":
-				return self._handle_anomaly_stats(entities.get("date"))
-			
-			elif intent == "inventory_summary":
-				return self._handle_inventory_summary()
-			
-			elif intent == "order_query":
-				return self._handle_order_query(entities.get("order_id"), entities.get("sku"), entities.get("date"))
-			
-			else:
-				return {
-					"answer": "I didn't understand that request. Try asking about bin contents, SKU locations, orders, or today's anomalies.",
-					"data": None
-				}
-		
 		except Exception as e:
 			logger.error(f"Error processing NLQ: {e}")
 			return {
@@ -55,498 +46,73 @@ class NaturalLanguageQueryService:
 				"data": None
 			}
 	
-	def _parse_intent(self, query_text: str) -> tuple[str, Dict[str, Any]]:
-		"""Parse query text to identify intent and extract entities"""
-		entities = {}
+	def _process_query_placeholder(self, query_text: str) -> Dict[str, Any]:
+		"""Placeholder implementation for demonstration purposes"""
+		query_text = query_text.strip().lower()
 		
-		# Check bin patterns (A54, 库位A54, 看看A54)
-		bin_patterns = [
-			# 英文/中文短语 + bin id
-			r'(?:bin\s+|库位\s*|看看\s*|查\s*)([A-Z]\d{1,3}|S-\d{1,2})',
-			# bin id + 描述
-			r'([A-Z]\d{1,3}|S-\d{1,2})(?:\s*现在有什么|.*有什么|.*内容)',
-			# 英文问句
-			r'what.+in\s+([A-Z]\d{1,3}|S-\d{1,2})',
-			r'check\s+([A-Z]\d{1,3}|S-\d{1,2})'
-		]
-		for pattern in bin_patterns:
-			match = re.search(pattern, query_text, re.IGNORECASE)
-			if match:
-				entities["bin_id"] = match.group(1).upper()
-				return "check_bin", entities
-		
-		# Check SKU patterns — 确保捕获完整 token 如 SKU-5566
-		sku_patterns = [
-			r'(?:sku\s*|找\s*)(SKU-[A-Z0-9]+)',
-			r'find.+sku.+(SKU-[A-Z0-9]+)',
-			r'where.+(SKU-[A-Z0-9]+)'
-		]
-		for pattern in sku_patterns:
-			match = re.search(pattern, query_text, re.IGNORECASE)
-			if match:
-				entities["sku"] = match.group(1).upper()
-				return "find_sku", entities
-		
-		# Check item ID patterns — 确保捕获 PALT-0001 等
-		item_patterns = [
-			r'(?:item\s+|托盘\s*|找\s*)(PALT-\d+|ITEM-\d+|[A-Z]+-\d+)',
-			r'where\s+is\s+(PALT-\d+|ITEM-\d+|[A-Z]+-\d+)[\?\.!]?',
-			r'(PALT-\d+|ITEM-\d+|[A-Z]+-\d+).*在哪'
-		]
-		for pattern in item_patterns:
-			match = re.search(pattern, query_text, re.IGNORECASE)
-			if match:
-				entities["item_id"] = match.group(1).upper()
-				return "find_item", entities
-		
-		# Check export/report patterns
-		export_patterns = [
-			r'(?:导出|下载|export|download).+(?:报告|report)',
-			r'(?:差异|异常|anomal).+(?:报告|report)',
-			r'generate.+report'
-		]
-		for pattern in export_patterns:
-			if re.search(pattern, query_text, re.IGNORECASE):
-				# Look for date
-				if "今天" in query_text or "today" in query_text:
-					entities["date"] = date.today()
-				elif "昨天" in query_text or "yesterday" in query_text:
-					from datetime import timedelta
-					entities["date"] = date.today() - timedelta(days=1)
-				else:
-					entities["date"] = date.today()
-				return "export_report", entities
-		
-		# Check anomaly stats patterns
-		anomaly_patterns = [
-			r'(?:今天|today).+(?:异常|anomal|差异)',
-			r'(?:异常|anomal).+(?:数量|count|统计)',
-			r'how many.+(?:异常|anomal)'
-		]
-		for pattern in anomaly_patterns:
-			if re.search(pattern, query_text, re.IGNORECASE):
-				entities["date"] = date.today()
-				return "anomaly_stats", entities
-		
-		# Check inventory summary patterns — 覆盖中文“库存总览”
-		summary_patterns = [
-			r'(?:库存\s*总览|库存\s*概览|inventory\s*summary|库存总览|库存概览)',
-			r'current.+inventory',
-			r'总共有多少'
-		]
-		for pattern in summary_patterns:
-			if re.search(pattern, query_text, re.IGNORECASE):
-				return "inventory_summary", entities
-		
-		# Check order patterns — 添加订单查询支持
-		order_patterns = [
-			r'(?:订单|order)\s*([A-Z]+-\d+)',
-			r'([A-Z]+-\d+)\s*(?:订单|order)',
-			r'find.+order\s+([A-Z]+-\d+)',
-			r'order\s+([A-Z]+-\d+)',
-			r'([A-Z]+-\d+).*订单',
-			# 直接输入订单ID (如 SO-1002)
-			r'^([A-Z]+-\d+)$',
-			r'([A-Z]+-\d+)',
-			# 支持更多格式
-			r'(?:查询|查看|find|check)\s+([A-Z]+-\d+)',
-			r'([A-Z]+-\d+)\s*(?:在哪里|where|status)'
-		]
-		for pattern in order_patterns:
-			match = re.search(pattern, query_text, re.IGNORECASE)
-			if match:
-				entities["order_id"] = match.group(1).upper()
-				return "order_query", entities
-		
-		# Check date-based order patterns — 智能日期识别
-		date_order_patterns = [
-			r'(?:订单|order).*?(\d{1,2})[\.\-](\d{1,2})',  # 订单 8.19, order 8-19
-			r'(\d{1,2})[\.\-](\d{1,2}).*?(?:订单|order)',  # 8.19 订单, 8-19 order
-			r'(\d{1,2})[\.\-](\d{1,2})',  # 直接输入 8.19, 8-19
-			# 支持更多日期格式
-			r'(\d{1,2})[\.\-](\d{1,2})(?:\s|$)',  # 8.19 或 8-19 结尾
-			r'(\d{1,2})/(\d{1,2})',  # 8/19 格式
-			r'(\d{1,2})\.(\d{1,2})',  # 8.19 格式
-		]
-		for pattern in date_order_patterns:
-			match = re.search(pattern, query_text, re.IGNORECASE)
-			if match:
-				month = int(match.group(1))
-				day = int(match.group(2))
-				# 自动识别当前年份
-				current_year = datetime.now().year
-				entities["date"] = f"{current_year}-{month:02d}-{day:02d}"
-				return "order_query", entities
-		
-		return "unknown", entities
-	
-	def _handle_bin_query(self, bin_id: str) -> Dict[str, Any]:
-		"""Handle bin content query"""
-		if not bin_id:
-			return {"answer": "Please specify a bin ID (like A54 or S-01).", "data": None}
-		
-		try:
-			# Get latest snapshot for this bin
-			latest_snapshot = (
-				self.db.query(Snapshot)
-				.filter(Snapshot.bin_id == bin_id)
-				.order_by(Snapshot.ts.desc())
-				.first()
-			)
-			
-			if not latest_snapshot:
-				return {
-					"answer": f"No recent snapshots found for bin {bin_id}. The bin may not have been scanned recently.",
-					"data": {"bin_id": bin_id, "items": []}
-				}
-			
-			item_ids = latest_snapshot.item_ids or []
-			photo_url = storage_manager.get_file_url(latest_snapshot.photo_ref) if latest_snapshot.photo_ref else None
-			
-			# 兼容 ts 可能为字符串的情况（测试里使用字符串）
-			try:
-				last_scanned_human = latest_snapshot.ts.strftime('%Y-%m-%d %H:%M')
-			except Exception:
-				last_scanned_human = str(latest_snapshot.ts)
-			
-			if not item_ids:
-				answer = f"Bin {bin_id} appears to be empty (last scanned: {last_scanned_human})."
-			else:
-				answer = f"Bin {bin_id} contains {len(item_ids)} items: {', '.join(item_ids[:5])}{'...' if len(item_ids) > 5 else ''} (last scanned: {last_scanned_human})."
-			
+		# Basic pattern matching for demonstration
+		if any(pattern in query_text for pattern in ['bin', '库位', 'A54', 'S-01']):
+			return self._handle_bin_query_placeholder("A54")
+		elif any(pattern in query_text for pattern in ['sku', 'SKU-', '找']):
+			return self._handle_sku_query_placeholder("SKU-001")
+		elif any(pattern in query_text for pattern in ['order', '订单', 'SO-', 'TEST-']):
+			return self._handle_order_query_placeholder("TEST-001")
+		elif any(pattern in query_text for pattern in ['8.19', '8-19', '8/19']):
+			return self._handle_date_query_placeholder("2025-08-19")
+		else:
 			return {
-				"answer": answer,
-				"data": {
-					"bin_id": bin_id,
-					"items": item_ids,
-					"last_scanned": latest_snapshot.ts if isinstance(latest_snapshot.ts, str) else latest_snapshot.ts.isoformat(),
-					"photo_url": photo_url,
-					"confidence": latest_snapshot.conf
-				}
+				"answer": "I didn't understand that request. Try asking about bin contents, SKU locations, orders, or today's anomalies.",
+				"data": None
 			}
-		
-		except Exception as e:
-			logger.error(f"Error handling bin query: {e}")
-			return {"answer": f"Error retrieving data for bin {bin_id}.", "data": None}
 	
-	def _handle_sku_query(self, sku: str) -> Dict[str, Any]:
-		"""Handle SKU location query"""
-		if not sku:
-			return {"answer": "Please specify a SKU to search for.", "data": None}
-		
-		try:
-			# Find items with this SKU
-			items = self.db.query(Item).filter(Item.sku == sku).all()
-			
-			if not items:
-				return {
-					"answer": f"No items found for SKU {sku}.",
-					"data": {"sku": sku, "locations": []}
-				}
-			
-			# Get locations from allocations and snapshots
-			locations = []
-			for item in items:
-				# Check allocation
-				allocation = self.db.query(Allocation).filter(Allocation.item_id == item.item_id).first()
-				expected_bin = allocation.bin_id if allocation else None
-				
-				# Check latest snapshot
-				snapshot = (
-					self.db.query(Snapshot)
-					.filter(Snapshot.item_ids.contains([item.item_id]))
-					.order_by(Snapshot.ts.desc())
-					.first()
-				)
-				
-				actual_bin = snapshot.bin_id if snapshot else None
-				last_seen = snapshot.ts if snapshot else None
-				
-				location_info = {
-					"item_id": item.item_id,
-					"expected_bin": expected_bin,
-					"actual_bin": actual_bin,
-					"last_seen": last_seen.isoformat() if last_seen else None,
-					"status": "found" if actual_bin else "missing"
-				}
-				locations.append(location_info)
-			
-			found_count = sum(1 for loc in locations if loc["status"] == "found")
-			answer = f"Found {len(items)} items for SKU {sku}. {found_count} are currently visible in the warehouse."
-			
-			return {
-				"answer": answer,
-				"data": {
-					"sku": sku,
-					"total_items": len(items),
-					"found_items": found_count,
-					"locations": locations
-				}
+	def _handle_bin_query_placeholder(self, bin_id: str) -> Dict[str, Any]:
+		"""Placeholder bin query handler"""
+		return {
+			"answer": f"Bin {bin_id} contains 3 items: ITEM-001, ITEM-002, ITEM-003. (Placeholder data)",
+			"data": {
+				"bin_id": bin_id,
+				"items": ["ITEM-001", "ITEM-002", "ITEM-003"],
+				"items_count": 3,
+				"confidence": 0.95
 			}
-		
-		except Exception as e:
-			logger.error(f"Error handling SKU query: {e}")
-			return {"answer": f"Error searching for SKU {sku}.", "data": None}
+		}
 	
-	def _handle_item_query(self, item_id: str) -> Dict[str, Any]:
-		"""Handle specific item location query"""
-		if not item_id:
-			return {"answer": "Please specify an item ID to search for.", "data": None}
-		
-		try:
-			# Get item info
-			item = self.db.query(Item).filter(Item.item_id == item_id).first()
-			
-			if not item:
-				return {
-					"answer": f"Item {item_id} not found in the system.",
-					"data": None
-				}
-			
-			# Get allocation
-			allocation = self.db.query(Allocation).filter(Allocation.item_id == item_id).first()
-			expected_bin = allocation.bin_id if allocation else None
-			
-			# Get latest snapshot
-			snapshot = (
-				self.db.query(Snapshot)
-				.filter(Snapshot.item_ids.contains([item_id]))
-				.order_by(Snapshot.ts.desc())
-				.first()
-			)
-			
-			if snapshot:
-				answer = f"Item {item_id} (SKU: {item.sku}) was last seen in bin {snapshot.bin_id} at {snapshot.ts.strftime('%Y-%m-%d %H:%M')}."
-				photo_url = storage_manager.get_file_url(snapshot.photo_ref) if snapshot.photo_ref else None
-			else:
-				answer = f"Item {item_id} (SKU: {item.sku}) has not been seen in recent snapshots."
-				photo_url = None
-			
-			if expected_bin and snapshot and snapshot.bin_id != expected_bin:
-				answer += f" (Expected in {expected_bin})"
-			
-			return {
-				"answer": answer,
-				"data": {
-					"item_id": item_id,
-					"sku": item.sku,
-					"expected_bin": expected_bin,
-					"actual_bin": snapshot.bin_id if snapshot else None,
-					"last_seen": snapshot.ts.isoformat() if snapshot else None,
-					"photo_url": photo_url
-				}
+	def _handle_sku_query_placeholder(self, sku: str) -> Dict[str, Any]:
+		"""Placeholder SKU query handler"""
+		return {
+			"answer": f"SKU {sku} is located in bin A54 with 2 items. (Placeholder data)",
+			"data": {
+				"sku": sku,
+				"total_items": 2,
+				"found_items": 2,
+				"locations": [{"item_id": "ITEM-001", "bin": "A54", "status": "found"}]
 			}
-		
-		except Exception as e:
-			logger.error(f"Error handling item query: {e}")
-			return {"answer": f"Error searching for item {item_id}.", "data": None}
+		}
 	
-	def _handle_export_request(self, target_date: date) -> Dict[str, Any]:
-		"""Handle export report request"""
-		try:
-			date_str = target_date.strftime('%Y-%m-%d')
-			answer = f"Reconciliation report for {date_str} can be generated via the reconcile API endpoint."
-			
-			return {
-				"answer": answer,
-				"data": {
-					"date": date_str,
-					"endpoint": f"/api/reconcile/run?date={date_str}",
-					"suggestion": "Use the reconcile page or API to generate the report."
-				}
+	def _handle_order_query_placeholder(self, order_id: str) -> Dict[str, Any]:
+		"""Placeholder order query handler"""
+		return {
+			"answer": f"Order {order_id}: SKU SKU-001, Quantity 2, Ship Date 2025-08-19, Status Active. (Placeholder data)",
+			"data": {
+				"order_id": order_id,
+				"sku": "SKU-001",
+				"qty": 2,
+				"ship_date": "2025-08-19",
+				"status": "Active"
 			}
-		
-		except Exception as e:
-			logger.error(f"Error handling export request: {e}")
-			return {"answer": "Error processing export request.", "data": None}
+		}
 	
-	def _handle_anomaly_stats(self, target_date: date) -> Dict[str, Any]:
-		"""Handle anomaly statistics query"""
-		try:
-			from datetime import timedelta
-			
-			anomalies = (
-				self.db.query(Anomaly)
-				.filter(
-					Anomaly.ts >= target_date,
-					Anomaly.ts < target_date + timedelta(days=1)
-				)
-				.all()
-			)
-			
-			total_count = len(anomalies)
-			type_counts = {}
-			severity_counts = {}
-			
-			for anomaly in anomalies:
-				type_counts[anomaly.type] = type_counts.get(anomaly.type, 0) + 1
-				severity_counts[anomaly.severity] = severity_counts.get(anomaly.severity, 0) + 1
-			
-			if total_count == 0:
-				answer = f"No anomalies found for {target_date.strftime('%Y-%m-%d')}. All looks good!"
-			else:
-				answer = f"Found {total_count} anomalies for {target_date.strftime('%Y-%m-%d')}."
-				if type_counts:
-					type_summary = ", ".join([f"{count} {type_}" for type_, count in type_counts.items()])
-					answer += f" Types: {type_summary}."
-			
-			return {
-				"answer": answer,
-				"data": {
-					"date": target_date.strftime('%Y-%m-%d'),
-					"total_anomalies": total_count,
-					"by_type": type_counts,
-					"by_severity": severity_counts
-				}
+	def _handle_date_query_placeholder(self, date_str: str) -> Dict[str, Any]:
+		"""Placeholder date query handler"""
+		return {
+			"answer": f"Found 2 orders for {date_str}: 1 SKU-001, 1 SKU-002 (total quantity: 2). (Placeholder data)",
+			"data": {
+				"date": date_str,
+				"order_count": 2,
+				"total_quantity": 2,
+				"orders": [
+					{"order_id": "TEST-001", "sku": "SKU-001", "qty": 1},
+					{"order_id": "TEST-002", "sku": "SKU-002", "qty": 1}
+				]
 			}
-		
-		except Exception as e:
-			logger.error(f"Error handling anomaly stats: {e}")
-			return {"answer": "Error retrieving anomaly statistics.", "data": None}
-	
-	def _handle_inventory_summary(self) -> Dict[str, Any]:
-		"""Handle inventory summary query"""
-		try:
-			# Get counts
-			total_items = self.db.query(Item).count()
-			total_bins = self.db.query(Snapshot.bin_id).distinct().count()
-			
-			# Get recent snapshot count
-			from datetime import timedelta
-			recent_snapshots = (
-				self.db.query(Snapshot)
-				.filter(Snapshot.ts >= datetime.now() - timedelta(hours=24))
-				.count()
-			)
-			
-			answer = f"Inventory summary: {total_items} total items, {total_bins} bins with activity, {recent_snapshots} snapshots in last 24 hours."
-			
-			return {
-				"answer": answer,
-				"data": {
-					"total_items": total_items,
-					"active_bins": total_bins,
-					"recent_snapshots": recent_snapshots,
-					"last_updated": datetime.now().isoformat()
-				}
-			}
-		
-		except Exception as e:
-			logger.error(f"Error handling inventory summary: {e}")
-			return {"answer": "Error retrieving inventory summary.", "data": None}
-	
-	def _handle_order_query(self, order_id: str, sku: str = None, date: str = None) -> Dict[str, Any]:
-		"""Handle order query"""
-		try:
-			from ..models import Order
-			
-			# Search by order ID if provided
-			if order_id:
-				order = self.db.query(Order).filter(Order.order_id == order_id).first()
-				if order:
-					answer = f"Order {order_id}: SKU {order.sku}, Quantity {order.qty}, Ship Date {order.ship_date}, Status {order.status}."
-					if order.item_ids:
-						answer += f" Items: {', '.join(order.item_ids)}."
-					
-					return {
-						"answer": answer,
-						"data": {
-							"order_id": order.order_id,
-							"sku": order.sku,
-							"qty": order.qty,
-							"ship_date": order.ship_date.isoformat() if hasattr(order.ship_date, 'isoformat') else str(order.ship_date),
-							"status": order.status,
-							"item_ids": order.item_ids
-						}
-					}
-				else:
-					return {
-						"answer": f"Order {order_id} not found.",
-						"data": None
-					}
-			
-			# Search by date if provided
-			elif date:
-				# 查询指定日期的订单
-				orders = self.db.query(Order).filter(Order.ship_date == date).all()
-				if orders:
-					order_count = len(orders)
-					total_qty = sum(order.qty for order in orders)
-					sku_summary = {}
-					for order in orders:
-						sku_summary[order.sku] = sku_summary.get(order.sku, 0) + order.qty
-					
-					sku_list = ", ".join([f"{qty} {sku}" for sku, qty in sku_summary.items()])
-					answer = f"Found {order_count} orders for {date}: {sku_list} (total quantity: {total_qty})."
-					
-					return {
-						"answer": answer,
-						"data": {
-							"date": date,
-							"order_count": order_count,
-							"total_quantity": total_qty,
-							"sku_summary": sku_summary,
-							"orders": [
-								{
-									"order_id": order.order_id,
-									"sku": order.sku,
-									"qty": order.qty,
-									"ship_date": order.ship_date.isoformat() if hasattr(order.ship_date, 'isoformat') else str(order.ship_date),
-									"status": order.status,
-									"item_ids": order.item_ids
-								}
-								for order in orders
-							]
-						}
-					}
-				else:
-					return {
-						"answer": f"No orders found for {date}.",
-						"data": None
-					}
-			
-			# Search by SKU if provided
-			elif sku:
-				orders = self.db.query(Order).filter(Order.sku == sku).all()
-				if orders:
-					order_count = len(orders)
-					total_qty = sum(order.qty for order in orders)
-					answer = f"Found {order_count} orders for SKU {sku}, total quantity: {total_qty}."
-					
-					return {
-						"answer": answer,
-						"data": {
-							"sku": sku,
-							"order_count": order_count,
-							"total_quantity": total_qty,
-							"orders": [
-								{
-									"order_id": order.order_id,
-									"qty": order.qty,
-									"ship_date": order.ship_date.isoformat() if hasattr(order.ship_date, 'isoformat') else str(order.ship_date),
-									"status": order.status
-								}
-								for order in orders
-							]
-						}
-					}
-				else:
-					return {
-						"answer": f"No orders found for SKU {sku}.",
-						"data": None
-					}
-			
-			else:
-				return {
-					"answer": "Please specify an order ID, date, or SKU to search for.",
-					"data": None
-				}
-		
-		except Exception as e:
-			logger.error(f"Error handling order query: {e}")
-			return {"answer": "Error retrieving order information.", "data": None}
-
-
-def create_nlq_service(db: Session) -> NaturalLanguageQueryService:
-	"""Factory function to create NLQ service"""
-	return NaturalLanguageQueryService(db)
+		}

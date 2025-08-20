@@ -83,3 +83,18 @@ backend/app/services/business/profit_calculator.py
 backend/app/services/business/inventory_optimizer.py
 backend/app/services/ai_core/ml_models/
 backend/app/services/ai_core/neural_networks/
+
+# 核心AI算法实现
+backend/app/services/ai_core/advanced_nlp.py
+backend/app/services/ai_core/machine_learning.py
+backend/app/services/ai_core/optimization_algorithms.py
+
+# 高级商业逻辑
+backend/app/services/business/advanced_analytics.py
+backend/app/services/business/prediction_models.py
+backend/app/services/business/optimization_engine.py
+
+# 专有算法和模型
+backend/app/services/ai_core/proprietary_algorithms/
+backend/app/services/business/trade_secrets/
+backend/app/services/ai_core/custom_models/
