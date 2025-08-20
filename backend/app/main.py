@@ -162,6 +162,19 @@ async def reconcile_page(request: Request):
         raise HTTPException(status_code=500, detail="Error loading reconcile page")
 
 
+@app.get("/orders", response_class=HTMLResponse)
+async def orders_page(request: Request):
+    """Orders management page"""
+    try:
+        return templates.TemplateResponse("orders.html", {
+            "request": request,
+            "api_key": settings.api_key
+        })
+    except Exception as e:
+        logger.error(f"Error rendering orders page: {e}")
+        raise HTTPException(status_code=500, detail="Error loading orders page")
+
+
 # API status endpoint
 @app.get("/api/status")
 async def get_status():
