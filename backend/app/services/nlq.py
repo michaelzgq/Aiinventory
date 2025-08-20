@@ -116,3 +116,8 @@ class NaturalLanguageQueryService:
 				]
 			}
 		}
+
+
+def create_nlq_service(db: Session) -> NaturalLanguageQueryService:
+    """Factory function to create NLQ service - 保持向后兼容"""
+    return NaturalLanguageQueryService(db)
