@@ -39,9 +39,12 @@ class NaturalLanguageQueryService:
 			elif intent == "inventory_summary":
 				return self._handle_inventory_summary()
 			
+			elif intent == "order_query":
+				return self._handle_order_query(entities.get("order_id"), entities.get("sku"), entities.get("date"))
+			
 			else:
 				return {
-					"answer": "I didn't understand that request. Try asking about bin contents, SKU locations, or today's anomalies.",
+					"answer": "I didn't understand that request. Try asking about bin contents, SKU locations, orders, or today's anomalies.",
 					"data": None
 				}
 		
@@ -134,6 +137,36 @@ class NaturalLanguageQueryService:
 		for pattern in summary_patterns:
 			if re.search(pattern, query_text, re.IGNORECASE):
 				return "inventory_summary", entities
+		
+		# Check order patterns — 添加订单查询支持
+		order_patterns = [
+			r'(?:订单|order)\s*([A-Z]+-\d+)',
+			r'([A-Z]+-\d+)\s*(?:订单|order)',
+			r'find.+order\s+([A-Z]+-\d+)',
+			r'order\s+([A-Z]+-\d+)',
+			r'([A-Z]+-\d+).*订单'
+		]
+		for pattern in order_patterns:
+			match = re.search(pattern, query_text, re.IGNORECASE)
+			if match:
+				entities["order_id"] = match.group(1).upper()
+				return "order_query", entities
+		
+		# Check date-based order patterns — 智能日期识别
+		date_order_patterns = [
+			r'(?:订单|order).*?(\d{1,2})[\.\-](\d{1,2})',  # 订单 8.19, order 8-19
+			r'(\d{1,2})[\.\-](\d{1,2}).*?(?:订单|order)',  # 8.19 订单, 8-19 order
+			r'(\d{1,2})[\.\-](\d{1,2})',  # 直接输入 8.19, 8-19
+		]
+		for pattern in date_order_patterns:
+			match = re.search(pattern, query_text, re.IGNORECASE)
+			if match:
+				month = int(match.group(1))
+				day = int(match.group(2))
+				# 自动识别当前年份
+				current_year = datetime.now().year
+				entities["date"] = f"{current_year}-{month:02d}-{day:02d}"
+				return "order_query", entities
 		
 		return "unknown", entities
 	
@@ -391,6 +424,117 @@ class NaturalLanguageQueryService:
 		except Exception as e:
 			logger.error(f"Error handling inventory summary: {e}")
 			return {"answer": "Error retrieving inventory summary.", "data": None}
+	
+	def _handle_order_query(self, order_id: str, sku: str = None, date: str = None) -> Dict[str, Any]:
+		"""Handle order query"""
+		try:
+			from ..models import Order
+			
+			# Search by order ID if provided
+			if order_id:
+				order = self.db.query(Order).filter(Order.order_id == order_id).first()
+				if order:
+					answer = f"Order {order_id}: SKU {order.sku}, Quantity {order.qty}, Ship Date {order.ship_date}, Status {order.status}."
+					if order.item_ids:
+						answer += f" Items: {', '.join(order.item_ids)}."
+					
+					return {
+						"answer": answer,
+						"data": {
+							"order_id": order.order_id,
+							"sku": order.sku,
+							"qty": order.qty,
+							"ship_date": order.ship_date.isoformat() if hasattr(order.ship_date, 'isoformat') else str(order.ship_date),
+							"status": order.status,
+							"item_ids": order.item_ids
+						}
+					}
+				else:
+					return {
+						"answer": f"Order {order_id} not found.",
+						"data": None
+					}
+			
+			# Search by date if provided
+			elif date:
+				# 查询指定日期的订单
+				orders = self.db.query(Order).filter(Order.ship_date == date).all()
+				if orders:
+					order_count = len(orders)
+					total_qty = sum(order.qty for order in orders)
+					sku_summary = {}
+					for order in orders:
+						sku_summary[order.sku] = sku_summary.get(order.sku, 0) + order.qty
+					
+					sku_list = ", ".join([f"{qty} {sku}" for sku, qty in sku_summary.items()])
+					answer = f"Found {order_count} orders for {date}: {sku_list} (total quantity: {total_qty})."
+					
+					return {
+						"answer": answer,
+						"data": {
+							"date": date,
+							"order_count": order_count,
+							"total_quantity": total_qty,
+							"sku_summary": sku_summary,
+							"orders": [
+								{
+									"order_id": order.order_id,
+									"sku": order.sku,
+									"qty": order.qty,
+									"ship_date": order.ship_date.isoformat() if hasattr(order.ship_date, 'isoformat') else str(order.ship_date),
+									"status": order.status,
+									"item_ids": order.item_ids
+								}
+								for order in orders
+							]
+						}
+					}
+				else:
+					return {
+						"answer": f"No orders found for {date}.",
+						"data": None
+					}
+			
+			# Search by SKU if provided
+			elif sku:
+				orders = self.db.query(Order).filter(Order.sku == sku).all()
+				if orders:
+					order_count = len(orders)
+					total_qty = sum(order.qty for order in orders)
+					answer = f"Found {order_count} orders for SKU {sku}, total quantity: {total_qty}."
+					
+					return {
+						"answer": answer,
+						"data": {
+							"sku": sku,
+							"order_count": order_count,
+							"total_quantity": total_qty,
+							"orders": [
+								{
+									"order_id": order.order_id,
+									"qty": order.qty,
+									"ship_date": order.ship_date.isoformat() if hasattr(order.ship_date, 'isoformat') else str(order.ship_date),
+									"status": order.status
+								}
+								for order in orders
+							]
+						}
+					}
+				else:
+					return {
+						"answer": f"No orders found for SKU {sku}.",
+						"data": None
+					}
+			
+			else:
+				return {
+					"answer": "Please specify an order ID, date, or SKU to search for.",
+					"data": None
+				}
+		
+		except Exception as e:
+			logger.error(f"Error handling order query: {e}")
+			return {"answer": "Error retrieving order information.", "data": None}
 
 
 def create_nlq_service(db: Session) -> NaturalLanguageQueryService:

@@ -12,12 +12,13 @@
 
 <div class="row mb-3">
     <div class="col-md-6">
-        <div class="input-group">
-            <input type="text" class="form-control" id="search-orders" placeholder="Search orders by ID, SKU, or date...">
-            <button class="btn btn-outline-secondary" type="button" id="search-btn">
-                <i class="fas fa-search"></i> Search
-            </button>
-        </div>
+                        <div class="input-group">
+                    <input type="text" class="form-control" id="search-orders" placeholder="Search orders by ID, SKU, date (e.g., 8.19, 08-19)...">
+                    <button class="btn btn-outline-secondary" type="button" id="search-btn">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+                <small class="text-muted">支持日期格式: 8.19, 08.19, 8-19, 08-19 (自动识别当前年份)</small>
     </div>
     <div class="col-md-6 text-end">
         <button class="btn btn-primary" id="refresh-orders">
@@ -41,16 +42,16 @@
                     <table class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
-                                <th>Order ID</th>
-                                <th>Ship Date</th>
-                                <th>SKU</th>
-                                <th>Quantity</th>
-                                <th>Item IDs</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th class="text-white">Order ID</th>
+                                <th class="text-white">Ship Date</th>
+                                <th class="text-white">SKU</th>
+                                <th class="text-white">Quantity</th>
+                                <th class="text-white">Item IDs</th>
+                                <th class="text-white">Status</th>
+                                <th class="text-white">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="orders-table-body">
+                        <tbody id="orders-table-body" class="text-dark">
                             <!-- Orders will be loaded here -->
                         </tbody>
                     </table>
@@ -222,11 +223,33 @@ function searchOrders() {
         return;
     }
     
-    const filteredOrders = allOrders.filter(order => 
-        order.order_id.toLowerCase().includes(searchTerm) ||
-        order.sku.toLowerCase().includes(searchTerm) ||
-        order.ship_date.includes(searchTerm)
-    );
+    // 支持空格分隔的多个关键词搜索
+    const keywords = searchTerm.split(/\s+/).filter(keyword => keyword.length > 0);
+    
+    const filteredOrders = allOrders.filter(order => {
+        // 每个关键词都必须匹配至少一个字段
+        return keywords.every(keyword => {
+            // 检查是否是日期格式 (如 8.19, 08.19, 8-19, 08-19)
+            const dateMatch = keyword.match(/^(\d{1,2})[\.\-](\d{1,2})$/);
+            if (dateMatch) {
+                const month = parseInt(dateMatch[1]);
+                const day = parseInt(dateMatch[2]);
+                const currentYear = new Date().getFullYear();
+                const searchDate = `${currentYear}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                
+                // 检查订单日期是否匹配
+                return order.ship_date && order.ship_date.includes(searchDate);
+            }
+            
+            // 普通关键词搜索
+            return order.order_id.toLowerCase().includes(keyword) ||
+                   order.sku.toLowerCase().includes(keyword) ||
+                   order.ship_date.includes(keyword) ||
+                   (order.item_ids && order.item_ids.some(itemId => 
+                       itemId.toLowerCase().includes(keyword)
+                   ));
+        });
+    });
     
     currentPage = 1;
     displayOrders(filteredOrders);
