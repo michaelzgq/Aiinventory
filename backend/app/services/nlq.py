@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Optional
 import re
 from datetime import datetime, date, timedelta
 import logging
-from ..models import Snapshot, Item, Anomaly, Allocation
+from ..models import Snapshot, Item, Anomaly, Allocation, Order
 from ..utils.storage import storage_manager
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,6 @@ class NaturalLanguageQueryService:
 		"""Smart order query handler with date recognition"""
 		try:
 			# 尝试从数据库获取真实订单数据
-			from ..models import Order
 			
 			# 识别查询类型
 			if '今天' in query_text or 'today' in query_text:
