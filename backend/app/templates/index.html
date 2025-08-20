@@ -18,7 +18,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">Today's Orders</h5>
-                        <h2 id="today-orders">-</h2>
+                        <h2 id="today-orders" class="text-white">-</h2>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-shopping-cart fa-2x"></i>
@@ -33,7 +33,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">Snapshots Today</h5>
-                        <h2 id="today-snapshots">-</h2>
+                        <h2 id="today-snapshots" class="text-white">-</h2>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-camera fa-2x"></i>
@@ -48,7 +48,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">Anomalies</h5>
-                        <h2 id="today-anomalies">-</h2>
+                        <h2 id="today-anomalies" class="text-white">-</h2>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-exclamation-triangle fa-2x"></i>
@@ -63,7 +63,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">Bins Scanned</h5>
-                        <h2 id="bins-scanned">-</h2>
+                        <h2 id="bins-scanned" class="text-white">-</h2>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-cubes fa-2x"></i>
@@ -109,7 +109,7 @@
             <div class="card-body">
                 <div class="mb-3">
                     <input type="text" class="form-control" id="nlq-input" 
-                           placeholder="e.g., 'A54现在有什么？' or 'Where is SKU-5566?'">
+                           placeholder="e.g., 'A54现在有什么？' or 'Where is SKU-5566?' or 'SO-1002 订单'">
                 </div>
                 <div class="d-grid gap-2">
                     <button class="btn btn-outline-primary" onclick="processNLQ()">
@@ -198,12 +198,13 @@
                 const data = await response.json();
                 displayRecentSnapshots(data.snapshots || data || []);
             } else {
-                throw new Error(`HTTP ${response.status}`);
+                document.getElementById('recent-snapshots').innerHTML = 
+                    '<div class="text-muted">No snapshots available</div>';
             }
         } catch (error) {
             console.error('Error loading snapshots:', error);
             document.getElementById('recent-snapshots').innerHTML = 
-                '<div class="alert alert-info">No snapshots available</div>';
+                '<div class="text-muted">No snapshots available</div>';
         }
     }
 
@@ -219,61 +220,59 @@
                 const data = await response.json();
                 displayRecentAnomalies(data.anomalies || data || []);
             } else {
-                throw new Error(`HTTP ${response.status}`);
+                document.getElementById('recent-anomalies').innerHTML = 
+                    '<div class="text-muted">No recent anomalies! 🎉</div>';
             }
         } catch (error) {
             console.error('Error loading anomalies:', error);
             document.getElementById('recent-anomalies').innerHTML = 
-                '<div class="alert alert-success">No anomalies found! 🎉</div>';
+                '<div class="text-muted">No recent anomalies! 🎉</div>';
         }
     }
 
     function displayRecentSnapshots(snapshots) {
         const container = document.getElementById('recent-snapshots');
+        if (!container) return;
+
         if (!snapshots || snapshots.length === 0) {
-            container.innerHTML = '<p class="text-muted">No recent snapshots</p>';
+            container.innerHTML = '<div class="text-muted">No snapshots available</div>';
             return;
         }
 
         const html = snapshots.map(snapshot => `
-            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <div class="d-flex justify-content-between align-items-center mb-2">
                 <div>
-                    <strong>${snapshot.bin_id || 'Unknown Bin'}</strong><br>
-                    <small class="text-muted">${(snapshot.item_ids || []).length} items</small>
+                    <strong>${snapshot.bin_id || 'Unknown Bin'}</strong>
+                    <br>
+                    <small class="text-muted">${new Date(snapshot.timestamp).toLocaleString()}</small>
                 </div>
-                <div class="text-end">
-                    <small>${new Date(snapshot.ts).toLocaleTimeString()}</small><br>
-                    <span class="badge bg-${(snapshot.conf || 0) > 0.8 ? 'success' : (snapshot.conf || 0) > 0.5 ? 'warning' : 'danger'}">
-                        ${((snapshot.conf || 0) * 100).toFixed(0)}%
-                    </span>
-                </div>
+                <span class="badge bg-info">${snapshot.items_count || 0} items</span>
             </div>
         `).join('');
-        
+
         container.innerHTML = html;
     }
 
     function displayRecentAnomalies(anomalies) {
         const container = document.getElementById('recent-anomalies');
+        if (!container) return;
+
         if (!anomalies || anomalies.length === 0) {
-            container.innerHTML = '<p class="text-muted text-success">No recent anomalies! 🎉</p>';
+            container.innerHTML = '<div class="text-muted">No recent anomalies! 🎉</div>';
             return;
         }
 
         const html = anomalies.map(anomaly => `
-            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <div class="d-flex justify-content-between align-items-center mb-2">
                 <div>
-                    <span class="badge bg-${anomaly.severity === 'high' ? 'danger' : anomaly.severity === 'med' ? 'warning' : 'info'}">
-                        ${anomaly.type || 'Unknown'}
-                    </span><br>
-                    <small class="text-muted">${(anomaly.detail || '').substring(0, 50)}...</small>
+                    <strong>${anomaly.item_id || 'Unknown Item'}</strong>
+                    <br>
+                    <small class="text-muted">${anomaly.description || 'Anomaly detected'}</small>
                 </div>
-                <div class="text-end">
-                    <small>${new Date(anomaly.ts).toLocaleTimeString()}</small>
-                </div>
+                <span class="badge bg-warning">${anomaly.severity || 'medium'}</span>
             </div>
         `).join('');
-        
+
         container.innerHTML = html;
     }
 

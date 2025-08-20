@@ -402,3 +402,66 @@ body {
         border: 2px solid #000;
     }
 }
+
+/* Font Color Fixes - 字体颜色修复 */
+.text-white {
+    color: #ffffff !important;
+}
+
+.text-dark {
+    color: #212529 !important;
+}
+
+/* Dashboard Cards - 强制白色文字 */
+.card.bg-warning .card-body h2,
+.card.bg-success .card-body h2,
+.card.bg-info .card-body h2,
+.card.bg-primary .card-body h2 {
+    color: #ffffff !important;
+}
+
+.card.bg-warning .card-title,
+.card.bg-success .card-title,
+.card.bg-info .card-title,
+.card.bg-primary .card-title {
+    color: #ffffff !important;
+}
+
+/* NLQ Result - 确保答案文字可读 */
+#nlq-result .alert-success h6,
+#nlq-result .alert-success p {
+    color: #0f5132 !important;
+}
+
+#nlq-result .alert-danger h6,
+#nlq-result .alert-danger p {
+    color: #721c24 !important;
+}
+
+/* Recent Data Panels - 确保内容文字可读 */
+#recent-snapshots .text-muted,
+#recent-anomalies .text-muted {
+    color: #6c757d !important;
+}
+
+/* Orders Table - 确保表格文字可读 */
+.table-dark th {
+    color: #ffffff !important;
+}
+
+.table tbody.text-dark td {
+    color: #212529 !important;
+}
+
+/* Search Hints - 确保提示文字可读 */
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* Force white text on colored backgrounds */
+.bg-warning .text-white,
+.bg-success .text-white,
+.bg-info .text-white,
+.bg-primary .text-white {
+    color: #ffffff !important;
+}

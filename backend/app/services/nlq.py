@@ -144,7 +144,13 @@ class NaturalLanguageQueryService:
 			r'([A-Z]+-\d+)\s*(?:订单|order)',
 			r'find.+order\s+([A-Z]+-\d+)',
 			r'order\s+([A-Z]+-\d+)',
-			r'([A-Z]+-\d+).*订单'
+			r'([A-Z]+-\d+).*订单',
+			# 直接输入订单ID (如 SO-1002)
+			r'^([A-Z]+-\d+)$',
+			r'([A-Z]+-\d+)',
+			# 支持更多格式
+			r'(?:查询|查看|find|check)\s+([A-Z]+-\d+)',
+			r'([A-Z]+-\d+)\s*(?:在哪里|where|status)'
 		]
 		for pattern in order_patterns:
 			match = re.search(pattern, query_text, re.IGNORECASE)
@@ -157,6 +163,10 @@ class NaturalLanguageQueryService:
 			r'(?:订单|order).*?(\d{1,2})[\.\-](\d{1,2})',  # 订单 8.19, order 8-19
 			r'(\d{1,2})[\.\-](\d{1,2}).*?(?:订单|order)',  # 8.19 订单, 8-19 order
 			r'(\d{1,2})[\.\-](\d{1,2})',  # 直接输入 8.19, 8-19
+			# 支持更多日期格式
+			r'(\d{1,2})[\.\-](\d{1,2})(?:\s|$)',  # 8.19 或 8-19 结尾
+			r'(\d{1,2})/(\d{1,2})',  # 8/19 格式
+			r'(\d{1,2})\.(\d{1,2})',  # 8.19 格式
 		]
 		for pattern in date_order_patterns:
 			match = re.search(pattern, query_text, re.IGNORECASE)
